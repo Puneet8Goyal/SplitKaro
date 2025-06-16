@@ -1,4 +1,4 @@
-package com.example.hisaab
+package com.puneet8goyal.splitkaro
 
 import org.junit.Test
 

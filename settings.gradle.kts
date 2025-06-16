@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Hissab"
+rootProject.name = "SplitKaro"
 include(":app")
  

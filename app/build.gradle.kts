@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.puneet8goyal.hissab" // Unique namespace
+    namespace = "com.puneet8goyal.splitkaro" // Unique namespace
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.puneet8goyal.hissab" // Unique app ID
+        applicationId = "com.puneet8goyal.splitkaro" // Unique app ID
         minSdk = 26
         targetSdk = 35
         versionCode = 1

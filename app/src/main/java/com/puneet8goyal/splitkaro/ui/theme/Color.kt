@@ -1,4 +1,4 @@
-package com.example.hisaab.ui.theme
+package com.puneet8goyal.splitkaro.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
