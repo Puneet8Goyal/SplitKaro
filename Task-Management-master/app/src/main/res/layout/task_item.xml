@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="15dp"
+    android:background="@color/greyLight"
+    android:orientation="vertical"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="5dp">
+
+    <ImageView
+        android:id="@+id/btnMenu"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        android:layout_margin="10dp"
+        android:src="@drawable/ic_dots"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="10dp"
+        android:paddingRight="10dp"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toLeftOf="@+id/btnMenu"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Eating Healthy Daily" />
+
+
+    <TextView
+        android:id="@+id/tvDescreption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="4dp"
+        android:textColor="@color/grey"
+        app:layout_constraintTop_toBottomOf="@+id/tvTitle"
+        tools:text="from tomorrow onwards i will eat healthy because i have seen this is not good for health and i have to work on myself" />
+
+    <TextView
+        android:id="@+id/startingDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="5dp"
+        android:textColor="@color/black"
+        android:textSize="15sp"
+        app:layout_constraintTop_toBottomOf="@+id/tvDescreption"
+        tools:text="Starting date: 9 June 2024" />
+
+    <TextView
+        android:id="@+id/tvDays"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="5dp"
+        android:textColor="@color/grey"
+        android:textSize="13sp"
+        app:layout_constraintTop_toBottomOf="@+id/startingDate"
+        tools:text="this task will take 6 days" />
+
+    <TextView
+        android:id="@+id/tvPriority"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="4dp"
+        android:textColor="@color/black"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@+id/tvDays"
+        tools:text="Priority: High" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="4dp"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvPriority"
+        tools:text="Status: Currently Working On It" />
+</androidx.constraintlayout.widget.ConstraintLayout>

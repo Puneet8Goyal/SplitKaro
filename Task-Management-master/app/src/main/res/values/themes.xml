@@ -1,0 +1,60 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.TaskManagement" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:textViewStyle">@style/TextViewStyle</item>
+        <item name="editTextStyle">@style/EditTextStyle</item>
+        <item name="buttonStyle">@style/ButtonStyle</item>
+        <item name="colorPrimary">@color/colorAccent</item>
+
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/backgroundColor</item>
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+    <style name="EditTextStyle" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@drawable/bg_edit_text</item>
+        <item name="android:textColor">@color/textColor</item>
+        <item name="android:padding">15dp</item>
+        <item name="android:textColorHint">@color/hintColor</item>
+
+        <item name="android:textCursorDrawable">@drawable/color_cursor</item>
+    </style>
+
+
+    <style name="TextViewStyle" parent="Widget.AppCompat.TextView">
+        <item name="android:textColor">@color/textColor</item>
+        <item name="android:textColorHint">@color/hintColor</item>
+        <item name="android:textCursorDrawable">@drawable/color_cursor</item>
+    </style>
+
+
+    <style name="ButtonStyle" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/bg_button</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:foreground">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:textColorHint">@color/hintColor</item>
+    </style>
+
+
+    <style name="Theme.TaskManagement" parent="Base.Theme.TaskManagement" />
+
+
+    <style name="CustomBottomSheetDialog" parent="@style/ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/CustomBottomSheet</item>
+    </style>
+
+    <style name="CustomBottomSheet" parent="Widget.MaterialComponents.BottomSheet">
+        <item name="shapeAppearanceOverlay">@style/CustomShapeAppearanceBottomSheetDialog</item>
+    </style>
+
+    <style name="CustomShapeAppearanceBottomSheetDialog" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopRight">20dp</item>
+        <item name="cornerSizeTopLeft">20dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+    </style>
+
+
+
+</resources>

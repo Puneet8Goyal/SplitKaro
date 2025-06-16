@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:foregroundGravity="center">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="40dp"
+        android:layout_marginEnd="40dp"
+        app:cardBackgroundColor="@color/white"
+        app:cardCornerRadius="10dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="10sp">
+
+
+            <TextView
+                android:id="@+id/tv1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="10dp"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:text="@string/task_managemnt"
+                android:textColor="@color/colorAccent"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/selectedText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="10dp"
+                android:paddingHorizontal="10dp"
+                android:text="you have selected the Word : hello World"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                app:layout_constraintTop_toBottomOf="@+id/tv1" />
+
+            <View
+                android:id="@+id/v1"
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:layout_marginVertical="5dp"
+                android:background="@color/grey"
+                app:layout_constraintTop_toBottomOf="@+id/selectedText" />
+
+            <TextView
+                android:id="@+id/close"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="30dp"
+                android:paddingVertical="7dp"
+                android:text="Okay"
+                android:textColor="@color/colorAccent"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/v1" />
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+
+</FrameLayout>
