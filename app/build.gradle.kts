@@ -55,6 +55,7 @@ dependencies {
     // Core Android Libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.kotlinx.metadata.jvm) // Or the latest compatible version
 
     // Lifecycle and ViewModel for Compose
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -77,6 +78,7 @@ dependencies {
     // Hilt for Dependency Injection
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler) // Now works with kapt plugin
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // Room for Database
     implementation(libs.androidx.room.runtime)
@@ -91,4 +93,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation (libs.material3)
 }
