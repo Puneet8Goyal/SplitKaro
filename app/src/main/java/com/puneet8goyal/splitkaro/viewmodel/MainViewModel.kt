@@ -15,13 +15,22 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository
 ) : ViewModel() {
+
     var title by mutableStateOf("")
     var amount by mutableStateOf("")
     var paidBy by mutableStateOf("")
     var groupId by mutableStateOf("")
     var expenses by mutableStateOf<List<Expense>>(emptyList())
     var snackbarMessage by mutableStateOf("")
+    var selectedExpense by mutableStateOf<Expense?>(null)
 
+    init {
+        // Load expenses when ViewModel initializes
+        viewModelScope.launch {
+            val defaultGroupId = 1L // Assuming a default group ID for now
+            expenses = expenseRepository.getExpensesForGroup(defaultGroupId)
+        }
+    }
 
     fun addExpense() {
         viewModelScope.launch {
@@ -38,12 +47,27 @@ class MainViewModel @Inject constructor(
                     expenseRepository.insertExpense(expense)
                     expenses = expenseRepository.getExpensesForGroup(expenseGroupId)
                     clearInputs()
-                }else{
-                    snackbarMessage = "Please fill all the fields"
+                } else {
+                    snackbarMessage = "All fields are required!"
                 }
             } catch (e: NumberFormatException) {
                 snackbarMessage = "Invalid number format for Amount or Group ID!"
             }
+        }
+    }
+
+    fun editExpense(updatedExpense: Expense) {
+        viewModelScope.launch {
+            expenseRepository.updateExpense(updatedExpense)
+            expenses = expenseRepository.getExpensesForGroup(updatedExpense.groupId)
+            selectedExpense = null
+        }
+    }
+
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch {
+            expenseRepository.deleteExpense(expense)
+            expenses = expenseRepository.getExpensesForGroup(expense.groupId)
         }
     }
 
@@ -60,5 +84,13 @@ class MainViewModel @Inject constructor(
 
     fun clearSnackbar() {
         snackbarMessage = ""
+    }
+
+    fun selectExpenseForEdit(expense: Expense) {
+        selectedExpense = expense
+        title = expense.title
+        amount = expense.amount.toString()
+        paidBy = expense.paidBy
+        groupId = expense.groupId.toString()
     }
 }

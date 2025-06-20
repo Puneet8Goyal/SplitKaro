@@ -7,11 +7,20 @@ import javax.inject.Inject
 class ExpenseRepository @Inject constructor(
     private val expenseDao: ExpenseDao
 ) {
-    suspend fun insertExpense(expense: Expense){
+    suspend fun insertExpense(expense: Expense) {
         expenseDao.insertExpense(expense)
     }
 
-    suspend fun getExpensesForGroup(groupId:Long):List<Expense>{
-        return expenseDao.getExpenseFromGroup(groupId)
+    suspend fun getAllExpenses(): List<Expense> {
+        return expenseDao.getAllExpenses()
     }
+
+    suspend fun updateExpense(expense: Expense) {
+        expenseDao.updateExpense(expense)
+    }
+
+    suspend fun deleteExpense(expense: Expense) {
+        expenseDao.deleteExpense(expense)
+    }
+
 }
