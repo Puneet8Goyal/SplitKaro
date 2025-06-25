@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.puneet8goyal.splitkaro.data.Expense
 import com.puneet8goyal.splitkaro.domain.ExpenseCalculator
+import com.puneet8goyal.splitkaro.domain.ExpenseSummary
 import com.puneet8goyal.splitkaro.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -18,16 +19,33 @@ class HomeViewModel @Inject constructor(
     private val expenseCalculator: ExpenseCalculator
 ) : ViewModel() {
     var expenses by mutableStateOf<List<Expense>>(emptyList())
-    var overallBalance by mutableStateOf(0.0)
+    var expenseSummary by mutableStateOf(
+        ExpenseSummary(
+            totalExpenses = 0,
+            totalAmount = 0.0,
+            userShare = 0.0,
+            overallBalance = 0.0,
+            averageExpense = 0.0
+        )
+    )
+    var isLoading by mutableStateOf(false)
 
     init {
         loadExpenses()
     }
 
     private fun loadExpenses() {
+        isLoading = true
         viewModelScope.launch {
-            expenses = expenseRepository.getAllExpenses()
-            overallBalance = expenseCalculator.calculateOverallBalance(expenses)
+            try {
+                expenses = expenseRepository.getAllExpenses()
+                expenseSummary = expenseCalculator.calculateExpenseSummary(expenses)
+            } catch (e: Exception) {
+                // Handle error if needed
+                println("Error loading expenses: ${e.message}")
+            } finally {
+                isLoading = false
+            }
         }
     }
 
@@ -35,4 +53,7 @@ class HomeViewModel @Inject constructor(
         loadExpenses()
     }
 
+    fun getExpensesByPayer(): Map<String, List<Expense>> {
+        return expenseCalculator.getExpensesByPayer(expenses)
+    }
 }

@@ -3,6 +3,7 @@ package com.puneet8goyal.splitkaro.di
 import android.content.Context
 import androidx.room.Room
 import com.puneet8goyal.splitkaro.database.AppDatabase
+import com.puneet8goyal.splitkaro.domain.ExpenseCalculator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,4 +27,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideExpenseDao(database: AppDatabase) = database.expenseDao()
+
+    @Provides
+    @Singleton
+    fun provideExpenseCalculator():ExpenseCalculator{
+        return ExpenseCalculator()
+    }
 }
