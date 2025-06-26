@@ -23,7 +23,7 @@ class AddExpenseViewModel @Inject constructor(
     var snackbarMessage by mutableStateOf("")
     var isLoading by mutableStateOf(false)
 
-    fun addExpense(onSuccess: () -> Unit) {
+    fun addExpense(groupId:Long, onSuccess: () -> Unit) {
         if (isLoading) return
 
         val validationError = validateInputs()
@@ -40,6 +40,7 @@ class AddExpenseViewModel @Inject constructor(
                 val perPerson = expenseAmount / splitCount
 
                 val expense = Expense(
+                    groupId=groupId,
                     description = description.trim(),
                     amount = expenseAmount,
                     paidBy = paidBy.trim(),

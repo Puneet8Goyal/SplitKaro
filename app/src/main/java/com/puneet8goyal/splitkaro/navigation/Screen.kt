@@ -1,19 +1,13 @@
 package com.puneet8goyal.splitkaro.navigation
 
-sealed class Screen(
-    val route: String,
-    val title: String,
-    val icon: String
-) {
-    object Home : Screen(
-        route = "home",
-        title = "Home",
-        icon = "🏠"
-    )
+sealed class Screen(val route: String) {
+    object Group : Screen("group")
 
-    object AddExpense : Screen(
-        route = "add_expense",
-        title = "Add",
-        icon = "➕"
-    )
+    object Home : Screen("home/{groupId}") {
+        fun createRoute(groupId: Long) = "home/$groupId"
+    }
+
+    object AddExpense : Screen("add_expense/{groupId}") {
+        fun createRoute(groupId: Long) = "add_expense/$groupId"
+    }
 }

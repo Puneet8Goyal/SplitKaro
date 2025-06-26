@@ -30,6 +30,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideGroupDao(database:AppDatabase)=database.groupDao()
+
+    @Provides
+    @Singleton
     fun provideExpenseCalculator():ExpenseCalculator{
         return ExpenseCalculator()
     }
