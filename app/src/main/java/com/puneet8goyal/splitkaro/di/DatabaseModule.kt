@@ -14,6 +14,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -21,7 +22,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "splitkaro_database"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -30,11 +33,19 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideGroupDao(database:AppDatabase)=database.groupDao()
+    fun provideExpenseCollectionDao(database: AppDatabase) = database.expenseCollectionDao()
 
     @Provides
     @Singleton
-    fun provideExpenseCalculator():ExpenseCalculator{
+    fun provideMemberDao(database: AppDatabase) = database.memberDao()
+
+    @Provides
+    @Singleton
+    fun provideSettlementDao(database: AppDatabase) = database.settlementDao()
+
+    @Provides
+    @Singleton
+    fun provideExpenseCalculator(): ExpenseCalculator {
         return ExpenseCalculator()
     }
 }

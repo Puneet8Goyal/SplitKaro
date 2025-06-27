@@ -77,6 +77,7 @@ dependencies {
 
     // Hilt for Dependency Injection
     implementation(libs.hilt.android)
+    implementation(libs.vision.internal.vkp)
     kapt(libs.hilt.compiler) // Now works with kapt plugin
     implementation(libs.androidx.hilt.navigation.compose)
 
@@ -94,4 +95,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation (libs.material3)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.accompanist.swiperefresh)
 }

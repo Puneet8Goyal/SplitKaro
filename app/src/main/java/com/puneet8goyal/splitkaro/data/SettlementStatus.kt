@@ -3,11 +3,10 @@ package com.puneet8goyal.splitkaro.data
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
-import com.puneet8goyal.splitkaro.database.Converters
 
+// Simple settlement tracking
 @Entity(
-    tableName = "expenses",
+    tableName = "settlements",
     foreignKeys = [
         ForeignKey(
             entity = ExpenseCollection::class,
@@ -17,15 +16,19 @@ import com.puneet8goyal.splitkaro.database.Converters
         )
     ]
 )
-@TypeConverters(Converters::class)
-data class Expense(
+data class SettlementRecord(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val collectionId: Long,
-    val description: String,
+    val fromMemberId: Long,
+    val toMemberId: Long,
     val amount: Double,
-    val paidByMemberId: Long,
-    val splitAmongMemberIds: List<Long>,
-    val perPersonAmount: Double,
-    val createdAt: Long = System.currentTimeMillis(),
-    val isSettled: Boolean = false
+    val isSettled: Boolean = false,
+    val settledAt: Long? = null
+)
+
+// Enhanced Settlement with status
+data class SettlementWithStatus(
+    val settlement: com.puneet8goyal.splitkaro.domain.Settlement,
+    val isSettled: Boolean = false,
+    val settledAt: Long? = null
 )

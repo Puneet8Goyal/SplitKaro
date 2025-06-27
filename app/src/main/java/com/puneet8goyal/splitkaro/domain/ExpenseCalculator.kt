@@ -1,94 +1,8 @@
 package com.puneet8goyal.splitkaro.domain
 
 import com.puneet8goyal.splitkaro.data.Expense
+import com.puneet8goyal.splitkaro.data.Member
 import com.puneet8goyal.splitkaro.data.OwedResult
-
-class ExpenseCalculator {
-
-    fun calculatePerPersonAmount(totalAmount: Double, splitAmong: Int): Double {
-        return if (splitAmong > 0) totalAmount / splitAmong else 0.0
-    }
-
-    /**
-     * Calculates what each person owes for a single expense.
-     * Since we don't store individual participant names, this returns a simplified calculation.
-     * The person who paid should receive: (totalAmount - perPersonShare)
-     * Each other person owes: perPersonShare
-     */
-    fun calculateOwed(expense: Expense): List<OwedResult> {
-        val perPerson = calculatePerPersonAmount(expense.amount, expense.splitAmong)
-        val owedList = mutableListOf<OwedResult>()
-
-        // The person who paid should receive money from others
-        val amountPaidByPayer = perPerson
-        val amountToReceive = expense.amount - amountPaidByPayer
-
-        if (amountToReceive > 0) {
-            owedList.add(OwedResult(expense.paidBy, -amountToReceive)) // Negative means they should receive
-        }
-
-        // For simplicity, we'll show how much each "other person" owes
-        // Since we don't track individual names, we'll show the per-person amount
-        if (expense.splitAmong > 1) {
-            owedList.add(OwedResult("Others (${expense.splitAmong - 1} people)", perPerson))
-        }
-
-        return owedList
-    }
-
-    /**
-     * Calculates the overall balance for the person who has been tracking expenses.
-     * This shows how much money they should receive in total.
-     */
-    fun calculateOverallBalance(expenses: List<Expense>): Double {
-        return expenses.sumOf { expense ->
-            val perPerson = calculatePerPersonAmount(expense.amount, expense.splitAmong)
-            // Amount the payer should receive from others
-            expense.amount - perPerson
-        }
-    }
-
-    /**
-     * Calculates total amount spent by the user
-     */
-    fun calculateTotalSpent(expenses: List<Expense>): Double {
-        return expenses.sumOf { it.amount }
-    }
-
-    /**
-     * Calculates how much the user actually owes (their share of all expenses)
-     */
-    fun calculateUserShare(expenses: List<Expense>): Double {
-        return expenses.sumOf { expense ->
-            calculatePerPersonAmount(expense.amount, expense.splitAmong)
-        }
-    }
-
-    /**
-     * Groups expenses by the person who paid
-     */
-    fun getExpensesByPayer(expenses: List<Expense>): Map<String, List<Expense>> {
-        return expenses.groupBy { it.paidBy }
-    }
-
-    /**
-     * Calculates summary statistics for expenses
-     */
-    fun calculateExpenseSummary(expenses: List<Expense>): ExpenseSummary {
-        val totalSpent = calculateTotalSpent(expenses)
-        val userShare = calculateUserShare(expenses)
-        val overallBalance = calculateOverallBalance(expenses)
-        val averageExpense = if (expenses.isNotEmpty()) totalSpent / expenses.size else 0.0
-
-        return ExpenseSummary(
-            totalExpenses = expenses.size,
-            totalAmount = totalSpent,
-            userShare = userShare,
-            overallBalance = overallBalance,
-            averageExpense = averageExpense
-        )
-    }
-}
 
 data class ExpenseSummary(
     val totalExpenses: Int,
@@ -97,3 +11,147 @@ data class ExpenseSummary(
     val overallBalance: Double,
     val averageExpense: Double
 )
+
+data class MemberBalance(
+    val member: Member,
+    val totalPaid: Double,
+    val totalOwed: Double,
+    val netBalance: Double // positive = owed money, negative = owes money
+)
+
+data class Settlement(
+    val fromMember: Member,
+    val toMember: Member,
+    val amount: Double
+)
+
+class ExpenseCalculator {
+
+    fun calculateExpenseSummary(expenses: List<Expense>, userId: Long? = null): ExpenseSummary {
+        val totalExpenses = expenses.size
+        val totalAmount = expenses.sumOf { it.amount }
+        val averageExpense = if (totalExpenses > 0) totalAmount / totalExpenses else 0.0
+
+        // Calculate user-specific data if userId provided
+        val userShare = if (userId != null) {
+            expenses.filter { userId in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+        } else 0.0
+
+        val userPaid = if (userId != null) {
+            expenses.filter { it.paidByMemberId == userId }.sumOf { it.amount }
+        } else 0.0
+
+        val overallBalance = userPaid - userShare
+
+        return ExpenseSummary(
+            totalExpenses = totalExpenses,
+            totalAmount = totalAmount,
+            userShare = userShare,
+            overallBalance = overallBalance,
+            averageExpense = averageExpense
+        )
+    }
+
+    fun getExpensesByPayer(expenses: List<Expense>): Map<Long, List<Expense>> {
+        return expenses.groupBy { it.paidByMemberId }
+    }
+
+    fun calculateMemberBalances(
+        expenses: List<Expense>,
+        members: List<Member>
+    ): List<MemberBalance> {
+        return members.map { member ->
+            val totalPaid = expenses.filter { it.paidByMemberId == member.id }.sumOf { it.amount }
+            val totalOwed =
+                expenses.filter { member.id in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+            val netBalance = totalPaid - totalOwed
+
+            MemberBalance(
+                member = member,
+                totalPaid = totalPaid,
+                totalOwed = totalOwed,
+                netBalance = netBalance
+            )
+        }
+    }
+
+    fun calculateSettlements(expenses: List<Expense>, members: List<Member>): List<Settlement> {
+        val balances = calculateMemberBalances(expenses, members)
+        val settlements = mutableListOf<Settlement>()
+
+        // Separate creditors (positive balance) and debtors (negative balance)
+        val creditors = balances.filter { it.netBalance > 0 }.sortedByDescending { it.netBalance }
+            .toMutableList()
+        val debtors =
+            balances.filter { it.netBalance < 0 }.sortedBy { it.netBalance }.toMutableList()
+
+        var i = 0
+        var j = 0
+
+        while (i < creditors.size && j < debtors.size) {
+            val creditor = creditors[i]
+            val debtor = debtors[j]
+
+            val amount = minOf(creditor.netBalance, -debtor.netBalance)
+
+            if (amount > 0.01) { // Avoid tiny settlements
+                settlements.add(
+                    Settlement(
+                        fromMember = debtor.member,
+                        toMember = creditor.member,
+                        amount = amount
+                    )
+                )
+
+                // Update balances
+                creditors[i] = creditor.copy(netBalance = creditor.netBalance - amount)
+                debtors[j] = debtor.copy(netBalance = debtor.netBalance + amount)
+            }
+
+            // Move to next creditor/debtor if balance is settled
+            if (creditors[i].netBalance < 0.01) i++
+            if (debtors[j].netBalance > -0.01) j++
+        }
+
+        return settlements
+    }
+
+    fun calculateWhoOwesWhom(expenses: List<Expense>, members: List<Member>): List<OwedResult> {
+        val balances = calculateMemberBalances(expenses, members)
+        return balances.map { balance ->
+            OwedResult(
+                person = balance.member.name,
+                amount = balance.netBalance
+            )
+        }
+    }
+
+    fun calculateSettlementsWithStatus(
+        expenses: List<Expense>,
+        members: List<Member>,
+        settledRecords: List<com.puneet8goyal.splitkaro.data.SettlementRecord> = emptyList()
+    ): List<com.puneet8goyal.splitkaro.data.SettlementWithStatus> {
+        val settlements = calculateSettlements(expenses, members)
+
+        return settlements.map { settlement ->
+            val settledRecord = settledRecords.find { record ->
+                record.fromMemberId == settlement.fromMember.id &&
+                        record.toMemberId == settlement.toMember.id &&
+                        record.amount == settlement.amount
+            }
+
+            com.puneet8goyal.splitkaro.data.SettlementWithStatus(
+                settlement = settlement,
+                isSettled = settledRecord?.isSettled ?: false,
+                settledAt = settledRecord?.settledAt
+            )
+        }
+    }
+
+    fun getMemberExpenseBreakdown(expenses: List<Expense>, memberId: Long): Pair<Double, Double> {
+        val totalPaid = expenses.filter { it.paidByMemberId == memberId }.sumOf { it.amount }
+        val totalOwed =
+            expenses.filter { memberId in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+        return Pair(totalPaid, totalOwed)
+    }
+}

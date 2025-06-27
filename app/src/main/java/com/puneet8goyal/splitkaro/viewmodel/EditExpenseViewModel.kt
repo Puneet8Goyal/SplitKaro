@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class AddExpenseViewModel @Inject constructor(
+class EditExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val memberRepository: MemberRepository
 ) : ViewModel() {
@@ -24,9 +24,34 @@ class AddExpenseViewModel @Inject constructor(
     var splitAmongMemberIds by mutableStateOf<List<Long>>(emptyList())
     var snackbarMessage by mutableStateOf("")
     var isLoading by mutableStateOf(false)
+    var expense by mutableStateOf<Expense?>(null)
 
-    fun addExpense(collectionId: Long, onSuccess: () -> Unit) {
+    fun loadExpense(expenseId: Long) {
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val loadedExpense = expenseRepository.getExpenseById(expenseId)
+                if (loadedExpense != null) {
+                    expense = loadedExpense
+                    description = loadedExpense.description
+                    amount = loadedExpense.amount.toString()
+                    paidByMemberId = loadedExpense.paidByMemberId
+                    splitAmongMemberIds = loadedExpense.splitAmongMemberIds
+                    println("DEBUG: Loaded expense for editing: ${loadedExpense.description}")
+                } else {
+                    snackbarMessage = "Expense not found"
+                }
+            } catch (e: Exception) {
+                snackbarMessage = "Error loading expense: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun updateExpense(onSuccess: () -> Unit) {
         if (isLoading) return
+        val currentExpense = expense ?: return
 
         snackbarMessage = ""
         val validationError = validateInputs()
@@ -42,29 +67,49 @@ class AddExpenseViewModel @Inject constructor(
                 val splitCount = splitAmongMemberIds.size
                 val perPerson = expenseAmount / splitCount
 
-                val expense = Expense(
-                    collectionId = collectionId,
+                val updatedExpense = currentExpense.copy(
                     description = description.trim(),
                     amount = expenseAmount,
                     paidByMemberId = paidByMemberId!!,
                     splitAmongMemberIds = splitAmongMemberIds,
-                    perPersonAmount = perPerson,
-                    createdAt = System.currentTimeMillis()
+                    perPersonAmount = perPerson
                 )
 
-                val result = expenseRepository.insertExpense(expense)
+                val result = expenseRepository.updateExpense(updatedExpense)
                 result.fold(
                     onSuccess = {
-                        clearInputs()
-                        snackbarMessage = "Expense added successfully!"
+                        snackbarMessage = "Expense updated successfully!"
                         onSuccess()
                     },
                     onFailure = { exception ->
-                        snackbarMessage = "Error adding expense: ${exception.message}"
+                        snackbarMessage = "Error updating expense: ${exception.message}"
                     }
                 )
             } catch (e: Exception) {
-                snackbarMessage = "Error adding expense: ${e.message}"
+                snackbarMessage = "Error updating expense: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun deleteExpense(onSuccess: () -> Unit) {
+        val currentExpense = expense ?: return
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val result = expenseRepository.deleteExpense(currentExpense)
+                result.fold(
+                    onSuccess = {
+                        snackbarMessage = "Expense deleted successfully!"
+                        onSuccess()
+                    },
+                    onFailure = { exception ->
+                        snackbarMessage = "Error deleting expense: ${exception.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                snackbarMessage = "Error deleting expense: ${e.message}"
             } finally {
                 isLoading = false
             }
@@ -80,14 +125,6 @@ class AddExpenseViewModel @Inject constructor(
             splitAmongMemberIds.isEmpty() -> "Select at least one person to split among"
             else -> null
         }
-    }
-
-    fun clearInputs() {
-        description = ""
-        amount = ""
-        paidByMemberId = null
-        splitAmongMemberIds = emptyList()
-        snackbarMessage = ""
     }
 
     fun updateDescription(value: String) {
