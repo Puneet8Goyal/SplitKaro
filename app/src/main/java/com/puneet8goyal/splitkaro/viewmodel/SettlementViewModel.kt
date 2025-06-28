@@ -22,19 +22,20 @@ import javax.inject.Inject
 class SettlementViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val memberRepository: MemberRepository,
-    private val settlementRepository: SettlementRepository,  // RESTORED
+    private val settlementRepository: SettlementRepository,
     private val expenseCalculator: ExpenseCalculator
 ) : ViewModel() {
 
     var expenses by mutableStateOf<List<Expense>>(emptyList())
     var members by mutableStateOf<List<Member>>(emptyList())
     var memberBalances by mutableStateOf<List<MemberBalance>>(emptyList())
-    var settlements by mutableStateOf<List<SettlementWithStatus>>(emptyList())  // RESTORED
+    var settlements by mutableStateOf<List<SettlementWithStatus>>(emptyList())
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf("")
+    var successMessage by mutableStateOf("")
+
     private var currentCollectionId: Long = -1L
 
-    // RESTORED: Settlement with status tracking
     data class SettlementWithStatus(
         val settlement: Settlement,
         val settlementRecord: SettlementRecord? = null,
@@ -45,41 +46,31 @@ class SettlementViewModel @Inject constructor(
         currentCollectionId = collectionId
         isLoading = true
         errorMessage = ""
+        successMessage = ""
 
         viewModelScope.launch {
             try {
+                // Load expenses and members for this specific collection only
                 val expensesList = expenseRepository.getExpensesByCollectionId(collectionId)
                 val membersList = memberRepository.getMembersByCollectionId(collectionId)
 
                 expenses = expensesList
                 members = membersList
+
+                // Calculate member balances for this collection only
                 memberBalances =
                     expenseCalculator.calculateMemberBalances(expensesList, membersList)
 
-                // RESTORED: Calculate settlements with status
-                val calculatedSettlements =
-                    expenseCalculator.calculateSettlements(expensesList, membersList)
+                // Calculate direct settlements without debt simplification
+                val calculatedSettlements = calculateDirectSettlements(memberBalances)
+
+                // Load existing settlement records for this collection only
                 val existingRecords = settlementRepository.getSettlementsForCollection(collectionId)
 
+                // Combine calculated settlements with existing records
                 settlements = combineSettlementsWithRecords(calculatedSettlements, existingRecords)
 
-                // If no settlement records exist and we have settlements to create, save them
-                if (existingRecords.isEmpty() && calculatedSettlements.isNotEmpty()) {
-                    settlementRepository.saveSettlementsFromCalculation(
-                        collectionId,
-                        calculatedSettlements
-                    ).fold(
-                        onSuccess = { newRecords ->
-                            settlements =
-                                combineSettlementsWithRecords(calculatedSettlements, newRecords)
-                        },
-                        onFailure = { exception ->
-                            println("DEBUG Settlement: Failed to save settlements: ${exception.message}")
-                        }
-                    )
-                }
-
-                println("DEBUG Settlement: Loaded ${expensesList.size} expenses, ${membersList.size} members")
+                println("DEBUG Settlement: Loaded ${expensesList.size} expenses, ${membersList.size} members for collection $collectionId")
                 println("DEBUG Settlement: Generated ${settlements.size} settlements (${settlements.count { it.isSettled }} settled)")
 
             } catch (e: Exception) {
@@ -91,7 +82,38 @@ class SettlementViewModel @Inject constructor(
         }
     }
 
-    // RESTORED: Combine calculated settlements with persisted records
+    // Direct settlements to prevent cross-effects
+    private fun calculateDirectSettlements(balances: List<MemberBalance>): List<Settlement> {
+        val settlements = mutableListOf<Settlement>()
+
+        // Get debtors and creditors
+        val debtors = balances.filter { it.netBalance < -0.01 }
+        val creditors = balances.filter { it.netBalance > 0.01 }
+
+        // Create direct settlements between each debtor and creditor
+        debtors.forEach { debtor ->
+            var remainingDebt = -debtor.netBalance
+
+            creditors.forEach { creditor ->
+                if (remainingDebt > 0.01 && creditor.netBalance > 0.01) {
+                    val settlementAmount = minOf(remainingDebt, creditor.netBalance)
+
+                    settlements.add(
+                        Settlement(
+                            fromMember = debtor.member,
+                            toMember = creditor.member,
+                            amount = settlementAmount
+                        )
+                    )
+
+                    remainingDebt -= settlementAmount
+                }
+            }
+        }
+
+        return settlements.filter { it.amount > 0.01 }
+    }
+
     private fun combineSettlementsWithRecords(
         calculatedSettlements: List<Settlement>,
         records: List<SettlementRecord>
@@ -111,50 +133,92 @@ class SettlementViewModel @Inject constructor(
         }
     }
 
-    // RESTORED: Mark settlement as settled functionality
-    fun markSettlementAsSettled(settlementWithStatus: SettlementWithStatus) {
+    // FIXED: Mark settlement and create actual settlement expense with success callback
+    fun markSettlementAsSettled(settlementWithStatus: SettlementWithStatus, onSuccess: () -> Unit) {
+        val settlement = settlementWithStatus.settlement
         val record = settlementWithStatus.settlementRecord
-        if (record == null) {
-            errorMessage = "Settlement record not found"
-            return
-        }
 
         viewModelScope.launch {
             try {
-                settlementRepository.markAsSettled(record.id, true).fold(
+                successMessage = ""
+                errorMessage = ""
+
+                // Step 1: Create or update settlement record
+                val recordId = if (record != null) {
+                    settlementRepository.markAsSettled(record.id, true).fold(
+                        onSuccess = { record.id },
+                        onFailure = { throw it }
+                    )
+                } else {
+                    // Create new settlement record
+                    val newRecord = SettlementRecord(
+                        collectionId = currentCollectionId,
+                        fromMemberId = settlement.fromMember.id,
+                        toMemberId = settlement.toMember.id,
+                        amount = settlement.amount,
+                        isSettled = true,
+                        settledAt = System.currentTimeMillis()
+                    )
+                    settlementRepository.insertSettlement(newRecord).fold(
+                        onSuccess = { it },
+                        onFailure = { throw it }
+                    )
+                }
+
+                // Step 2: Create settlement expense for history tracking
+                val settlementExpense = Expense(
+                    collectionId = currentCollectionId,
+                    description = "Settlement: ${settlement.fromMember.name} → ${settlement.toMember.name}",
+                    amount = settlement.amount,
+                    paidByMemberId = settlement.fromMember.id,
+                    splitAmongMemberIds = listOf(settlement.toMember.id),
+                    perPersonAmount = settlement.amount,
+                    createdAt = System.currentTimeMillis()
+                )
+
+                expenseRepository.insertExpense(settlementExpense).fold(
                     onSuccess = {
                         // Update local state
                         settlements = settlements.map { item ->
-                            if (item.settlementRecord?.id == record.id) {
+                            if (item.settlement.fromMember.id == settlement.fromMember.id &&
+                                item.settlement.toMember.id == settlement.toMember.id
+                            ) {
                                 item.copy(isSettled = true)
                             } else {
                                 item
                             }
                         }
-                        println("DEBUG Settlement: Marked settlement ${record.id} as settled")
+
+                        // Set success message
+                        successMessage = "💰 Settlement completed successfully!"
+
+                        // Call success callback
+                        onSuccess()
+
+                        // Reload data to refresh everything
+                        loadSettlementData(currentCollectionId)
+
+                        println("DEBUG Settlement: Successfully settled ${settlement.amount} from ${settlement.fromMember.name} to ${settlement.toMember.name}")
                     },
                     onFailure = { exception ->
-                        errorMessage = "Failed to mark settlement as settled: ${exception.message}"
-                        println("DEBUG Settlement: Error marking as settled: ${exception.message}")
+                        errorMessage = "Failed to record settlement expense: ${exception.message}"
+                        println("DEBUG Settlement: Error recording expense: ${exception.message}")
                     }
                 )
+
             } catch (e: Exception) {
-                errorMessage = "Error marking settlement as settled: ${e.message}"
-                println("DEBUG Settlement: Exception marking as settled: ${e.message}")
+                errorMessage = "Error settling payment: ${e.message}"
+                println("DEBUG Settlement: Exception settling payment: ${e.message}")
             }
         }
     }
 
-    fun refreshData() {
-        if (currentCollectionId != -1L) {
-            loadSettlementData(currentCollectionId)
-        }
-    }
-
     fun refreshData(collectionId: Long) {
+        isLoading = true
         currentCollectionId = collectionId
         loadSettlementData(collectionId)
     }
+
 
     fun getTotalCollectionAmount(): Double {
         return expenses.sumOf { it.amount }
@@ -164,17 +228,18 @@ class SettlementViewModel @Inject constructor(
         errorMessage = ""
     }
 
-    // RESTORED: Get only unsettled settlements for display
+    fun clearSuccessMessage() {
+        successMessage = ""
+    }
+
     fun getUnsettledSettlements(): List<SettlementWithStatus> {
         return settlements.filter { !it.isSettled }
     }
 
-    // RESTORED: Get settled settlements count for summary
     fun getSettledCount(): Int {
         return settlements.count { it.isSettled }
     }
 
-    // RESTORED: Check if all settlements are settled
     fun areAllSettled(): Boolean {
         return settlements.isNotEmpty() && settlements.all { it.isSettled }
     }

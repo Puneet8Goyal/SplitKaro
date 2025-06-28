@@ -1,29 +1,43 @@
 package com.puneet8goyal.splitkaro.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.TrendingDown
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,9 +51,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.puneet8goyal.splitkaro.ui.theme.AppTheme
 import com.puneet8goyal.splitkaro.utils.AppUtils
 import com.puneet8goyal.splitkaro.utils.MemberAvatar
+import com.puneet8goyal.splitkaro.utils.ModernLoadingState
+import com.puneet8goyal.splitkaro.utils.PremiumStatusCard
+import com.puneet8goyal.splitkaro.utils.StatusType
 import com.puneet8goyal.splitkaro.viewmodel.SettlementViewModel
 import kotlinx.coroutines.delay
 
@@ -48,21 +67,20 @@ import kotlinx.coroutines.delay
 fun SettlementScreen(
     collectionId: Long,
     viewModel: SettlementViewModel = hiltViewModel(),
-    onBackClick: () -> Unit = { }
+    onBackClick: (String?) -> Unit = { _ -> }
 ) {
     val expenses = viewModel.expenses
     val members = viewModel.members
     val memberBalances = viewModel.memberBalances
-    val unsettledSettlements =
-        viewModel.getUnsettledSettlements()  // FIXED: Get unsettled settlements
+    val unsettledSettlements = viewModel.getUnsettledSettlements()
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
-    val settledCount = viewModel.getSettledCount()  // RESTORED
-    val allSettled = viewModel.areAllSettled()      // RESTORED
+    val successMessage = viewModel.successMessage
+    val settledCount = viewModel.getSettledCount()
+    val allSettled = viewModel.areAllSettled()
 
     var isRefreshing by remember { mutableStateOf(false) }
 
-    // Handle refresh state
     LaunchedEffect(isLoading) {
         if (isLoading) {
             isRefreshing = true
@@ -76,373 +94,541 @@ fun SettlementScreen(
         viewModel.loadSettlementData(collectionId)
     }
 
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = {
-            viewModel.refreshData(collectionId)
-        },
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
+            .background(AppTheme.colors.background)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                viewModel.refreshData(collectionId)
+            },
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
+                // Top positioned success messages
+                AnimatedVisibility(
+                    visible = successMessage.isNotEmpty(),
+                    enter = slideInVertically(
+                        initialOffsetY = { -it },
+                        animationSpec = tween(400)
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut()
+                ) {
+                    Column {
+                        PremiumStatusCard(
+                            message = successMessage,
+                            type = StatusType.SUCCESS,
+                            onDismiss = { viewModel.clearSuccessMessage() },
+                            autoDismiss = true,
+                            autoDismissDelay = 3000L,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                        )
+                        Spacer(modifier = Modifier.height(AppTheme.spacing.md))
+                    }
                 }
 
-                Text(
-                    text = "Settlement",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp)
-                )
-            }
+                // Top positioned error messages
+                AnimatedVisibility(
+                    visible = errorMessage.isNotEmpty(),
+                    enter = slideInVertically(
+                        initialOffsetY = { -it },
+                        animationSpec = tween(400)
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut()
+                ) {
+                    Column {
+                        PremiumStatusCard(
+                            message = errorMessage,
+                            type = StatusType.ERROR,
+                            onDismiss = { viewModel.clearErrorMessage() },
+                            autoDismiss = true,
+                            autoDismissDelay = 4000L,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                        )
+                        Spacer(modifier = Modifier.height(AppTheme.spacing.md))
+                    }
+                }
 
-            when {
-                isRefreshing -> {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF4CAF50),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Refreshing settlement data...",
-                                color = Color.White,
-                                modifier = Modifier.padding(start = 12.dp)
+                // Top App Bar
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Settlement",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.25).sp
+                            ),
+                            color = AppTheme.colors.onSurface
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { onBackClick(null) }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = AppTheme.colors.onSurfaceVariant
                             )
                         }
-                    }
-                }
-
-                errorMessage.isNotEmpty() -> {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF4E1E1E)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .clickable { viewModel.clearErrorMessage() }
-                    ) {
-                        Text(
-                            text = "⚠️ $errorMessage\n(Tap to dismiss)",
-                            color = Color(0xFFFF6B6B),
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-
-                expenses.isEmpty() -> {
-                    Text(
-                        text = "No expenses to settle!",
-                        color = Color.Gray,
-                        modifier = Modifier.padding(8.dp)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = AppTheme.colors.background
                     )
-                }
+                )
 
-                else -> {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        // Summary Card
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                                modifier = Modifier.fillMaxWidth()
+                // Content
+                when {
+                    isRefreshing && expenses.isEmpty() -> {
+                        ModernLoadingState(message = "Refreshing settlement data...")
+                    }
+
+                    expenses.isEmpty() -> {
+                        // Empty state
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(AppTheme.spacing.huge),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "📊 Summary",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
+                                Text(
+                                    text = "💰",
+                                    style = MaterialTheme.typography.displayMedium.copy(
+                                        fontSize = 64.sp
                                     )
+                                )
 
-                                    Text(
-                                        text = "Total Amount: ${AppUtils.formatCurrency(viewModel.getTotalCollectionAmount())}",
-                                        color = Color.White,
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
+                                Text(
+                                    text = "No expenses to settle",
+                                    style = MaterialTheme.typography.headlineSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.25).sp
+                                    ),
+                                    color = AppTheme.colors.onSurface,
+                                    textAlign = TextAlign.Center
+                                )
 
-                                    Text(
-                                        text = "Total Expenses: ${expenses.size}",
-                                        color = Color.White,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-
-                                    Text(
-                                        text = "Members: ${members.size}",
-                                        color = Color.White,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-
-                                    // RESTORED: Show settled count
-                                    if (settledCount > 0) {
-                                        Text(
-                                            text = "Settled Payments: $settledCount",
-                                            color = Color(0xFF4CAF50),
-                                            modifier = Modifier.padding(top = 2.dp)
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = "Add some expenses to see settlement information",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        lineHeight = 24.sp
+                                    ),
+                                    color = AppTheme.colors.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
+                    }
 
-                        // Member Balances Section
-                        item {
-                            Text(
-                                text = "Member Balances",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-
-                        items(memberBalances) { balance ->
+                    else -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = AppTheme.spacing.xl),
+                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.xl)
+                        ) {
+                            // Summary Card
                             Card(
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = when {
-                                        balance.netBalance > 0 -> Color(0xFF1E4E1E)
-                                        balance.netBalance < 0 -> Color(0xFF4E1E1E)
-                                        else -> Color(0xFF2E2E2E)
-                                    }
+                                    containerColor = AppTheme.colors.surface
                                 ),
-                                modifier = Modifier.fillMaxWidth()
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                shape = RoundedCornerShape(AppTheme.radius.xl)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier.padding(AppTheme.spacing.xl),
+                                    verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
                                 ) {
-                                    MemberAvatar(member = balance.member, size = 40)
+                                    Text(
+                                        text = "Summary",
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = (-0.25).sp
+                                        ),
+                                        color = AppTheme.colors.onSurface
+                                    )
 
-                                    Column(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(start = 12.dp)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(
-                                            text = balance.member.name,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Medium
-                                        )
-
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
+                                        Column {
                                             Text(
-                                                text = "Paid: ${AppUtils.formatCurrency(balance.totalPaid)}",
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.bodySmall
+                                                text = "Total Amount",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                color = AppTheme.colors.onSurfaceVariant
                                             )
-
                                             Text(
-                                                text = "Owes: ${AppUtils.formatCurrency(balance.totalOwed)}",
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.bodySmall
+                                                text = AppUtils.formatCurrency(viewModel.getTotalCollectionAmount()),
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = AppTheme.colors.onSurface
                                             )
                                         }
 
-                                        Text(
-                                            text = when {
-                                                balance.netBalance > 0 -> "Gets back: ${
-                                                    AppUtils.formatCurrency(balance.netBalance)
-                                                }"
-
-                                                balance.netBalance < 0 -> "Owes: ${
-                                                    AppUtils.formatCurrency(-balance.netBalance)
-                                                }"
-
-                                                else -> "Settled ✓"
-                                            },
-                                            color = when {
-                                                balance.netBalance > 0 -> Color(0xFF4CAF50)
-                                                balance.netBalance < 0 -> Color(0xFFF44336)
-                                                else -> Color(0xFF4CAF50)
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        )
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "Total Expenses",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                color = AppTheme.colors.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = "${expenses.size}",
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = AppTheme.colors.onSurface
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        // FIXED: Settlements Section - Now using unsettled settlements
-                        if (unsettledSettlements.isNotEmpty()) {
-                            item {
+                            // Member Balances
+                            if (memberBalances.isNotEmpty()) {
+                                Text(
+                                    text = "Member Balances",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.25).sp
+                                    ),
+                                    color = AppTheme.colors.onSurface
+                                )
+
+                                memberBalances.forEach { balance ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = AppTheme.colors.surface
+                                        ),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                        shape = RoundedCornerShape(AppTheme.radius.xl)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(AppTheme.spacing.xl),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
+                                        ) {
+                                            MemberAvatar(
+                                                member = balance.member,
+                                                size = 48
+                                            )
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = balance.member.name,
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        letterSpacing = (-0.25).sp
+                                                    ),
+                                                    color = AppTheme.colors.onSurface
+                                                )
+
+                                                Text(
+                                                    text = "Paid: ${AppUtils.formatCurrency(balance.totalPaid)} • Owes: ${
+                                                        AppUtils.formatCurrency(
+                                                            balance.totalOwed
+                                                        )
+                                                    }",
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontWeight = FontWeight.Medium
+                                                    ),
+                                                    color = AppTheme.colors.onSurfaceVariant
+                                                )
+                                            }
+
+                                            Column(
+                                                horizontalAlignment = Alignment.End,
+                                                verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.xs)
+                                            ) {
+                                                Icon(
+                                                    imageVector = when {
+                                                        balance.netBalance > 0 -> Icons.Outlined.TrendingUp
+                                                        balance.netBalance < 0 -> Icons.Outlined.TrendingDown
+                                                        else -> Icons.Default.Check
+                                                    },
+                                                    contentDescription = null,
+                                                    tint = when {
+                                                        balance.netBalance > 0 -> AppTheme.colors.success
+                                                        balance.netBalance < 0 -> AppTheme.colors.error
+                                                        else -> AppTheme.colors.success
+                                                    },
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+
+                                                Text(
+                                                    text = when {
+                                                        balance.netBalance > 0 -> AppUtils.formatCurrency(
+                                                            balance.netBalance
+                                                        )
+
+                                                        balance.netBalance < 0 -> AppUtils.formatCurrency(
+                                                            -balance.netBalance
+                                                        )
+
+                                                        else -> "Settled"
+                                                    },
+                                                    style = MaterialTheme.typography.titleSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = (-0.25).sp
+                                                    ),
+                                                    color = when {
+                                                        balance.netBalance > 0 -> AppTheme.colors.success
+                                                        balance.netBalance < 0 -> AppTheme.colors.error
+                                                        else -> AppTheme.colors.success
+                                                    }
+                                                )
+
+                                                Text(
+                                                    text = when {
+                                                        balance.netBalance > 0 -> "gets back"
+                                                        balance.netBalance < 0 -> "owes"
+                                                        else -> "✓"
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontWeight = FontWeight.Medium
+                                                    ),
+                                                    color = when {
+                                                        balance.netBalance > 0 -> AppTheme.colors.success
+                                                        balance.netBalance < 0 -> AppTheme.colors.error
+                                                        else -> AppTheme.colors.success
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Settlements
+                            if (unsettledSettlements.isNotEmpty()) {
                                 Text(
                                     text = "Pending Settlements",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(vertical = 8.dp)
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.25).sp
+                                    ),
+                                    color = AppTheme.colors.onSurface
                                 )
-                            }
 
-                            items(unsettledSettlements) { settlementWithStatus ->
-                                SettlementCard(
-                                    settlementWithStatus = settlementWithStatus,
-                                    onMarkAsSettled = {
-                                        // FIXED: Now actually calls the ViewModel function
-                                        viewModel.markSettlementAsSettled(settlementWithStatus)
+                                unsettledSettlements.forEach { settlementWithStatus ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = AppTheme.colors.surface
+                                        ),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                        shape = RoundedCornerShape(AppTheme.radius.xl)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(AppTheme.spacing.xl),
+                                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(
+                                                    AppTheme.spacing.lg
+                                                )
+                                            ) {
+                                                MemberAvatar(
+                                                    member = settlementWithStatus.settlement.fromMember,
+                                                    size = 40
+                                                )
+
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowForward,
+                                                    contentDescription = "pays",
+                                                    tint = AppTheme.colors.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+
+                                                MemberAvatar(
+                                                    member = settlementWithStatus.settlement.toMember,
+                                                    size = 40
+                                                )
+
+                                                Spacer(modifier = Modifier.weight(1f))
+
+                                                Text(
+                                                    text = AppUtils.formatCurrency(
+                                                        settlementWithStatus.settlement.amount
+                                                    ),
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = (-0.25).sp
+                                                    ),
+                                                    color = AppTheme.colors.primary
+                                                )
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "${settlementWithStatus.settlement.fromMember.name} pays ${settlementWithStatus.settlement.toMember.name}",
+                                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                                        fontWeight = FontWeight.Medium
+                                                    ),
+                                                    color = AppTheme.colors.onSurface,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+
+                                                // FIXED: Proper button logic with dynamic text and state
+                                                Button(
+                                                    onClick = {
+                                                        viewModel.markSettlementAsSettled(
+                                                            settlementWithStatus
+                                                        ) {
+                                                            // Pass success message back to HomeScreen
+                                                            onBackClick("💰 Settlement completed successfully!")
+                                                        }
+                                                    },
+                                                    enabled = !settlementWithStatus.isSettled,
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = if (settlementWithStatus.isSettled)
+                                                            AppTheme.colors.success.copy(alpha = 0.6f)
+                                                        else
+                                                            AppTheme.colors.success,
+                                                        contentColor = Color.White,
+                                                        disabledContainerColor = AppTheme.colors.success.copy(
+                                                            alpha = 0.6f
+                                                        ),
+                                                        disabledContentColor = Color.White
+                                                    ),
+                                                    shape = RoundedCornerShape(AppTheme.radius.md)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (settlementWithStatus.isSettled)
+                                                            Icons.Default.Check
+                                                        else
+                                                            Icons.Default.ArrowForward,
+                                                        contentDescription = if (settlementWithStatus.isSettled) "Settled" else "Mark as Settled",
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(AppTheme.spacing.xs))
+                                                    Text(
+                                                        text = if (settlementWithStatus.isSettled) "✓ Settled" else "Settle",
+                                                        style = MaterialTheme.typography.labelMedium.copy(
+                                                            fontWeight = FontWeight.SemiBold
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
-                                )
-                            }
-                        }
-
-                        // RESTORED: All settled message
-                        if (allSettled || (unsettledSettlements.isEmpty() && settledCount > 0)) {
-                            item {
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = Color(
-                                            0xFF1E4E1E
-                                        )
-                                    ),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = "🎉 All settled! No payments needed.",
-                                        color = Color(0xFF4CAF50),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(16.dp),
-                                        textAlign = TextAlign.Center
-                                    )
                                 }
                             }
-                        }
 
-                        if (unsettledSettlements.isEmpty() && settledCount == 0 && memberBalances.all { it.netBalance == 0.0 }) {
-                            item {
+                            // All Settled Message
+                            if (allSettled || (unsettledSettlements.isEmpty() && settledCount > 0)) {
                                 Card(
+                                    modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(
-                                            0xFF1E4E1E
-                                        )
+                                        containerColor = AppTheme.colors.surface
                                     ),
-                                    modifier = Modifier.fillMaxWidth()
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    shape = RoundedCornerShape(AppTheme.radius.xl)
                                 ) {
-                                    Text(
-                                        text = "🎉 Perfect balance! Everyone has paid their share.",
-                                        color = Color(0xFF4CAF50),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(16.dp),
-                                        textAlign = TextAlign.Center
-                                    )
+                                    Column(
+                                        modifier = Modifier.padding(AppTheme.spacing.huge),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+                                    ) {
+                                        Text(
+                                            text = "🎉",
+                                            style = MaterialTheme.typography.displayMedium.copy(
+                                                fontSize = 48.sp
+                                            )
+                                        )
+                                        Text(
+                                            text = "All Settled!",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = (-0.25).sp
+                                            ),
+                                            color = AppTheme.colors.success,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Text(
+                                            text = "No payments needed. Everyone is settled up!",
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.Medium
+                                            ),
+                                            color = AppTheme.colors.onSurface,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
                                 }
                             }
+
+                            // Perfect Balance Message
+                            if (unsettledSettlements.isEmpty() && settledCount == 0 && memberBalances.all { it.netBalance == 0.0 }) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = AppTheme.colors.surface
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    shape = RoundedCornerShape(AppTheme.radius.xl)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(AppTheme.spacing.huge),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+                                    ) {
+                                        Text(
+                                            text = "⚖️",
+                                            style = MaterialTheme.typography.displayMedium.copy(
+                                                fontSize = 48.sp
+                                            )
+                                        )
+                                        Text(
+                                            text = "Perfect Balance!",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = (-0.25).sp
+                                            ),
+                                            color = AppTheme.colors.success,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Text(
+                                            text = "Everyone has paid their exact share. No settlements needed!",
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.Medium
+                                            ),
+                                            color = AppTheme.colors.onSurface,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(AppTheme.spacing.xl))
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-// FIXED: SettlementCard now works with the proper data structure
-@Composable
-fun SettlementCard(
-    settlementWithStatus: SettlementViewModel.SettlementWithStatus,
-    onMarkAsSettled: () -> Unit
-) {
-    val settlement = settlementWithStatus.settlement
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF3E2E5E)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    MemberAvatar(member = settlement.fromMember, size = 40)
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowForward,
-                            contentDescription = "pays",
-                            tint = Color.White
-                        )
-
-                        Text(
-                            text = AppUtils.formatCurrency(settlement.amount),
-                            color = Color(0xFF4CAF50),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    MemberAvatar(member = settlement.toMember, size = 40)
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${settlement.fromMember.name} → ${settlement.toMember.name}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                // FIXED: Now the button actually works!
-                Button(
-                    onClick = onMarkAsSettled,
-                    modifier = Modifier.padding(start = 8.dp),
-                    enabled = settlementWithStatus.settlementRecord != null  // Only enable if we have a record
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Mark as Settled",
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                    Text("Mark Settled")
                 }
             }
         }

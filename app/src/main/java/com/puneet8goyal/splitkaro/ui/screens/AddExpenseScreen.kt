@@ -1,30 +1,63 @@
 package com.puneet8goyal.splitkaro.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.puneet8goyal.splitkaro.ui.theme.AppTheme
+import com.puneet8goyal.splitkaro.utils.ModernErrorCard
+import com.puneet8goyal.splitkaro.utils.ModernMemberCard
+import com.puneet8goyal.splitkaro.utils.ModernMemberRow
+import com.puneet8goyal.splitkaro.utils.ModernPreviewCard
+import com.puneet8goyal.splitkaro.utils.ModernSectionCard
+import com.puneet8goyal.splitkaro.utils.ModernTextField
+import com.puneet8goyal.splitkaro.utils.PremiumStatusCard
+import com.puneet8goyal.splitkaro.utils.StatusType
 import com.puneet8goyal.splitkaro.viewmodel.AddExpenseViewModel
 import com.puneet8goyal.splitkaro.viewmodel.ExpenseCollectionViewModel
 
@@ -34,7 +67,8 @@ fun AddExpenseScreen(
     viewModel: AddExpenseViewModel = hiltViewModel(),
     collectionViewModel: ExpenseCollectionViewModel = hiltViewModel(),
     collectionId: Long,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
+    onBackClick: () -> Unit
 ) {
     val description = viewModel.description
     val amount = viewModel.amount
@@ -43,217 +77,227 @@ fun AddExpenseScreen(
     val snackbarMessage = viewModel.snackbarMessage
     val isLoading = viewModel.isLoading
 
-    // Get members for this specific collection
     val collectionMembers by collectionViewModel.collectionMembers.collectAsState()
     val membersInThisCollection = collectionMembers[collectionId] ?: emptyList()
 
-    var paidByExpanded by remember { mutableStateOf(false) }
-    var splitAmongExpanded by remember { mutableStateOf(false) }
-
-    // Load collection members when screen starts
     LaunchedEffect(collectionId) {
-        println("DEBUG AddExpenseScreen: Loading members for collection $collectionId")
         collectionViewModel.loadMembersForCollection(collectionId)
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(AppTheme.colors.background)
     ) {
-        Text(
-            text = "Add Expense",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // Show member count for this collection (DEBUG INFO)
-        Text(
-            text = "Members in this collection: ${membersInThisCollection.size}",
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        if (membersInThisCollection.isNotEmpty()) {
-            Text(
-                text = "Members: ${membersInThisCollection.joinToString(", ") { it.name }}",
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        if (membersInThisCollection.isEmpty()) {
-            Text(
-                text = "No members in this collection! Please add members first.",
-                color = Color.Red,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            return
-        }
-
-        TextField(
-            value = description,
-            onValueChange = { viewModel.updateDescription(it) },
-            label = { Text("Description") },
-            placeholder = { Text("What was this expense for?") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            enabled = !isLoading
-        )
-
-        TextField(
-            value = amount,
-            onValueChange = { viewModel.updateAmount(it) },
-            label = { Text("Amount (₹)") },
-            placeholder = { Text("0.00") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            enabled = !isLoading
-        )
-
-        // Paid By Dropdown - PROPER IMPLEMENTATION
-        ExposedDropdownMenuBox(
-            expanded = paidByExpanded,
-            onExpandedChange = {
-                paidByExpanded = !paidByExpanded
-                println("DEBUG: Paid By dropdown expanded: $paidByExpanded")
-            }
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            TextField(
-                value = membersInThisCollection.find { it.id == paidByMemberId }?.name
-                    ?: "Select who paid",
-                onValueChange = { },
-                readOnly = true,
-                label = { Text("Paid By") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = paidByExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                enabled = !isLoading
-            )
-
-            ExposedDropdownMenu(
-                expanded = paidByExpanded,
-                onDismissRequest = { paidByExpanded = false }
+            // FIXED: Top positioned error snackbar - ALWAYS VISIBLE
+            AnimatedVisibility(
+                visible = snackbarMessage.isNotEmpty() && !snackbarMessage.contains("success", ignoreCase = true),
+                enter = slideInVertically(
+                    initialOffsetY = { -it },
+                    animationSpec = tween(400)
+                ) + fadeIn(),
+                exit = slideOutVertically(
+                    targetOffsetY = { -it },
+                    animationSpec = tween(300)
+                ) + fadeOut()
             ) {
-                println("DEBUG: Rendering Paid By dropdown with ${membersInThisCollection.size} members")
-                membersInThisCollection.forEach { member ->
-                    DropdownMenuItem(
-                        text = { Text(member.name) },
-                        onClick = {
-                            println("DEBUG: Selected Paid By member: ${member.name} (ID: ${member.id})")
-                            viewModel.updatePaidByMemberId(member.id)
-                            paidByExpanded = false
-                        }
+                Column {
+                    PremiumStatusCard(
+                        message = snackbarMessage,
+                        type = StatusType.ERROR,
+                        onDismiss = { viewModel.clearErrorMessage() },
+                        autoDismiss = true,
+                        autoDismissDelay = 4000L,
+                        modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
                     )
+                    Spacer(modifier = Modifier.height(AppTheme.spacing.md))
                 }
             }
-        }
 
-        // Split Among Dropdown - PROPER IMPLEMENTATION
-        ExposedDropdownMenuBox(
-            expanded = splitAmongExpanded,
-            onExpandedChange = {
-                splitAmongExpanded = !splitAmongExpanded
-                println("DEBUG: Split Among dropdown expanded: $splitAmongExpanded")
-            }
-        ) {
-            TextField(
-                value = if (splitAmongMemberIds.isEmpty()) "Select who to split among"
-                else splitAmongMemberIds.mapNotNull { id ->
-                    membersInThisCollection.find { it.id == id }?.name
-                }.joinToString(", "),
-                onValueChange = { },
-                readOnly = true,
-                label = { Text("Split Among (${splitAmongMemberIds.size} selected)") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = splitAmongExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                enabled = !isLoading
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Add Expense",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.25).sp
+                        ),
+                        color = AppTheme.colors.onSurface
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = AppTheme.colors.onSurfaceVariant
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppTheme.colors.background
+                )
             )
 
-            ExposedDropdownMenu(
-                expanded = splitAmongExpanded,
-                onDismissRequest = { splitAmongExpanded = false }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = AppTheme.spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.xl)
             ) {
-                println("DEBUG: Rendering Split Among dropdown with ${membersInThisCollection.size} members")
-                membersInThisCollection.forEach { member ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(member.name, modifier = Modifier.weight(1f))
-                                if (member.id in splitAmongMemberIds) {
-                                    Text(" ✓", color = Color.Green)
-                                }
-                            }
-                        },
-                        onClick = {
-                            val newList = splitAmongMemberIds.toMutableList()
-                            if (member.id in newList) {
-                                newList.remove(member.id)
-                                println("DEBUG: Removed ${member.name} from split")
-                            } else {
-                                newList.add(member.id)
-                                println("DEBUG: Added ${member.name} to split")
-                            }
-                            viewModel.updateSplitAmongMemberIds(newList)
-                            // Don't close dropdown for multi-select
-                        }
-                    )
+                when {
+                    membersInThisCollection.isEmpty() -> {
+                        ModernErrorCard(
+                            title = "No members found",
+                            message = "Please add members to this group first."
+                        )
+                        return@Column
+                    }
+                    membersInThisCollection.size < 2 -> {
+                        ModernErrorCard(
+                            title = "Need more members",
+                            message = "You need at least 2 people in the group to split expenses. Please add more members first."
+                        )
+                        return@Column
+                    }
                 }
 
-                // Add "Done" button for multi-select
-                if (splitAmongMemberIds.isNotEmpty()) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                "✓ Done (${splitAmongMemberIds.size} selected)",
-                                color = Color.Green
+                ModernSectionCard(
+                    title = "Expense Details",
+                    icon = Icons.Outlined.Description
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
+                    ) {
+                        ModernTextField(
+                            value = description,
+                            onValueChange = { viewModel.updateDescription(it) },
+                            label = "Description",
+                            placeholder = "e.g., Dinner at restaurant",
+                            leadingIcon = Icons.Outlined.Description,
+                            enabled = !isLoading,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences
                             )
-                        },
-                        onClick = {
-                            splitAmongExpanded = false
+                        )
+
+                        ModernTextField(
+                            value = amount,
+                            onValueChange = { viewModel.updateAmount(it) },
+                            label = "Amount (₹)",
+                            placeholder = "0.00",
+                            leadingIcon = Icons.Outlined.AccountBalanceWallet,
+                            enabled = !isLoading,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                    }
+                }
+
+                ModernSectionCard(
+                    title = "Who paid?",
+                    subtitle = "Select the person who paid for this expense"
+                ) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+                    ) {
+                        items(membersInThisCollection) { member ->
+                            ModernMemberCard(
+                                member = member,
+                                isSelected = member.id == paidByMemberId,
+                                onClick = { viewModel.updatePaidByMemberId(member.id) },
+                                selectionType = "radio"
+                            )
                         }
+                    }
+                }
+
+                ModernSectionCard(
+                    title = "Split among",
+                    subtitle = if (splitAmongMemberIds.isNotEmpty())
+                        "${splitAmongMemberIds.size} selected"
+                    else
+                        "Select people to split this expense among"
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
+                    ) {
+                        membersInThisCollection.forEach { member ->
+                            ModernMemberRow(
+                                member = member,
+                                isSelected = member.id in splitAmongMemberIds,
+                                onClick = {
+                                    val newList = splitAmongMemberIds.toMutableList()
+                                    if (member.id in newList) {
+                                        newList.remove(member.id)
+                                    } else {
+                                        newList.add(member.id)
+                                    }
+                                    viewModel.updateSplitAmongMemberIds(newList)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (splitAmongMemberIds.isNotEmpty() && amount.toDoubleOrNull() != null) {
+                    val amountValue = amount.toDouble()
+                    val perPerson = amountValue / splitAmongMemberIds.size
+
+                    ModernPreviewCard(
+                        totalAmount = amountValue,
+                        perPersonAmount = perPerson,
+                        memberCount = splitAmongMemberIds.size
                     )
                 }
+
+                Button(
+                    onClick = {
+                        viewModel.addExpense(
+                            collectionId = collectionId,
+                            onSuccess = onSuccess
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    enabled = !isLoading && membersInThisCollection.size >= 2,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppTheme.colors.primary,
+                        contentColor = Color.White,
+                        disabledContainerColor = AppTheme.colors.onSurfaceVariant.copy(alpha = 0.12f),
+                        disabledContentColor = AppTheme.colors.onSurfaceVariant.copy(alpha = 0.38f)
+                    ),
+                    shape = RoundedCornerShape(AppTheme.radius.lg),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 8.dp
+                    )
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(AppTheme.spacing.sm))
+                        Text("Adding...")
+                    } else {
+                        Text(
+                            "Add Expense",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.1.sp
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppTheme.spacing.xl))
             }
-        }
-
-        // Show split preview
-        if (splitAmongMemberIds.isNotEmpty() && amount.toDoubleOrNull() != null) {
-            val amountValue = amount.toDouble()
-            val perPerson = amountValue / splitAmongMemberIds.size
-            Text(
-                text = "Per person: ₹${String.format("%.2f", perPerson)}",
-                color = Color.Gray,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-        }
-
-        Button(
-            onClick = { viewModel.addExpense(collectionId = collectionId, onSuccess = onSuccess) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading && membersInThisCollection.isNotEmpty()
-        ) {
-            Text(if (isLoading) "Adding..." else "Add Expense")
-        }
-
-        if (snackbarMessage.isNotEmpty()) {
-            Text(
-                text = snackbarMessage,
-                modifier = Modifier.padding(top = 8.dp),
-                color = if (snackbarMessage.contains("success", ignoreCase = true))
-                    Color(0xFF4CAF50) else Color.Red
-            )
         }
     }
 }

@@ -78,7 +78,7 @@ class EditExpenseViewModel @Inject constructor(
                 val result = expenseRepository.updateExpense(updatedExpense)
                 result.fold(
                     onSuccess = {
-                        snackbarMessage = "Expense updated successfully!"
+                        // FIXED: Don't show success snackbar here, pass to navigation
                         onSuccess()
                     },
                     onFailure = { exception ->
@@ -95,13 +95,14 @@ class EditExpenseViewModel @Inject constructor(
 
     fun deleteExpense(onSuccess: () -> Unit) {
         val currentExpense = expense ?: return
+
         isLoading = true
         viewModelScope.launch {
             try {
                 val result = expenseRepository.deleteExpense(currentExpense)
                 result.fold(
                     onSuccess = {
-                        snackbarMessage = "Expense deleted successfully!"
+                        // FIXED: Don't show success snackbar here, pass to navigation
                         onSuccess()
                     },
                     onFailure = { exception ->
@@ -129,29 +130,24 @@ class EditExpenseViewModel @Inject constructor(
 
     fun updateDescription(value: String) {
         description = value
-        // IMPLEMENTED: Auto-clear errors when user types
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
     fun updateAmount(value: String) {
         amount = value
-        // IMPLEMENTED: Auto-clear errors when user types
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
     fun updatePaidByMemberId(memberId: Long?) {
         paidByMemberId = memberId
-        // IMPLEMENTED: Auto-clear errors when user selects
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
     fun updateSplitAmongMemberIds(memberIds: List<Long>) {
         splitAmongMemberIds = memberIds
-        // IMPLEMENTED: Auto-clear errors when user selects
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
-    // IMPLEMENTED: Error message clearing
     fun clearErrorMessage() {
         snackbarMessage = ""
     }

@@ -56,7 +56,7 @@ class AddExpenseViewModel @Inject constructor(
                 result.fold(
                     onSuccess = {
                         clearInputs()
-                        snackbarMessage = "Expense added successfully!"
+                        // FIXED: Don't show success snackbar here, pass to navigation
                         onSuccess()
                     },
                     onFailure = { exception ->
@@ -92,29 +92,24 @@ class AddExpenseViewModel @Inject constructor(
 
     fun updateDescription(value: String) {
         description = value
-        // IMPLEMENTED: Auto-clear errors when user types
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
     fun updateAmount(value: String) {
         amount = value
-        // IMPLEMENTED: Auto-clear errors when user types
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
     fun updatePaidByMemberId(memberId: Long?) {
         paidByMemberId = memberId
-        // IMPLEMENTED: Auto-clear errors when user selects
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
     fun updateSplitAmongMemberIds(memberIds: List<Long>) {
         splitAmongMemberIds = memberIds
-        // IMPLEMENTED: Auto-clear errors when user selects
         if (snackbarMessage.isNotEmpty()) clearErrorMessage()
     }
 
-    // IMPLEMENTED: Error message clearing
     fun clearErrorMessage() {
         snackbarMessage = ""
     }

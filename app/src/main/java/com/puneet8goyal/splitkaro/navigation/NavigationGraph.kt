@@ -24,21 +24,30 @@ fun AppNavigationGraph(navController: NavHostController) {
         navController = navController,
         startDestination = Screen.ExpenseCollection.route
     ) {
-        // Collection List Screen
-        composable(Screen.ExpenseCollection.route) {
+        composable(Screen.ExpenseCollection.route) { backStackEntry ->
             val collectionViewModel: ExpenseCollectionViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
+
+            val successMessage = backStackEntry.savedStateHandle.get<String>("success_message")
+            val errorMessage = backStackEntry.savedStateHandle.get<String>("error_message")
+
+            // Clear messages after reading
+            backStackEntry.savedStateHandle.remove<String>("success_message")
+            backStackEntry.savedStateHandle.remove<String>("error_message")
+
             ExpenseCollectionScreen(
                 viewModel = collectionViewModel,
+                homeViewModel = homeViewModel,
+                initialSuccessMessage = successMessage,
+                initialErrorMessage = errorMessage,
                 onCollectionClick = { collectionId ->
                     navController.navigate(Screen.Home.createRoute(collectionId))
                 }
             )
         }
 
-        // Home/Expenses Screen
         composable(Screen.Home.route) { backStackEntry ->
             val collectionId = backStackEntry.arguments?.getString("collectionId")?.toLongOrNull()
-
             if (collectionId == null) {
                 navController.navigate(Screen.ExpenseCollection.route) {
                     popUpTo(Screen.ExpenseCollection.route) { inclusive = true }
@@ -47,10 +56,21 @@ fun AppNavigationGraph(navController: NavHostController) {
             }
 
             val homeViewModel: HomeViewModel = hiltViewModel()
+            val collectionViewModel: ExpenseCollectionViewModel = hiltViewModel()
+
+            val successMessage = backStackEntry.savedStateHandle.get<String>("success_message")
+            val errorMessage = backStackEntry.savedStateHandle.get<String>("error_message")
+
+            // Clear messages after reading
+            backStackEntry.savedStateHandle.remove<String>("success_message")
+            backStackEntry.savedStateHandle.remove<String>("error_message")
+
             HomeScreen(
                 viewModel = homeViewModel,
-                collectionViewModel = hiltViewModel(),
+                collectionViewModel = collectionViewModel,
                 collectionId = collectionId,
+                initialSuccessMessage = successMessage,
+                initialErrorMessage = errorMessage,
                 onAddExpenseClick = {
                     navController.navigate(Screen.AddExpense.createRoute(collectionId))
                 },
@@ -66,10 +86,8 @@ fun AppNavigationGraph(navController: NavHostController) {
             )
         }
 
-        // Add Expense Screen
         composable(Screen.AddExpense.route) { backStackEntry ->
             val collectionId = backStackEntry.arguments?.getString("collectionId")?.toLongOrNull()
-
             if (collectionId == null) {
                 navController.navigate(Screen.ExpenseCollection.route) {
                     popUpTo(Screen.ExpenseCollection.route) { inclusive = true }
@@ -78,68 +96,78 @@ fun AppNavigationGraph(navController: NavHostController) {
             }
 
             val addExpenseViewModel: AddExpenseViewModel = hiltViewModel()
+            val collectionViewModel: ExpenseCollectionViewModel = hiltViewModel()
+
             AddExpenseScreen(
                 viewModel = addExpenseViewModel,
-                collectionViewModel = hiltViewModel(),
+                collectionViewModel = collectionViewModel,
                 collectionId = collectionId,
                 onSuccess = {
-                    navController.navigate(Screen.Home.createRoute(collectionId)) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                    }
-                }
+                    navController.previousBackStackEntry?.savedStateHandle?.set("success_message", "✅ Expense added successfully!")
+                    navController.popBackStack()
+                },
+                onBackClick = { navController.popBackStack() }
             )
         }
 
-        // Edit Expense Screen
         composable(Screen.EditExpense.route) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getString("expenseId")?.toLongOrNull()
-
             if (expenseId == null) {
                 navController.popBackStack()
                 return@composable
             }
 
             val editExpenseViewModel: EditExpenseViewModel = hiltViewModel()
+            val collectionViewModel: ExpenseCollectionViewModel = hiltViewModel()
+
             EditExpenseScreen(
                 expenseId = expenseId,
                 viewModel = editExpenseViewModel,
-                collectionViewModel = hiltViewModel(),
+                collectionViewModel = collectionViewModel,
                 onSuccess = {
+                    navController.previousBackStackEntry?.savedStateHandle?.set("success_message", "✅ Expense updated successfully!")
                     navController.popBackStack()
                 },
                 onDelete = {
+                    navController.previousBackStackEntry?.savedStateHandle?.set("success_message", "🗑️ Expense deleted successfully!")
                     navController.popBackStack()
-                }
+                },
+                onBackClick = { navController.popBackStack() }
             )
         }
 
-        // Settlement Screen
+        // FIXED: Settlement screen - only pass success message when settlement actually happens
         composable(Screen.Settlement.route) { backStackEntry ->
             val collectionId = backStackEntry.arguments?.getString("collectionId")?.toLongOrNull()
-
             if (collectionId == null) {
                 navController.popBackStack()
                 return@composable
             }
 
             val settlementViewModel: SettlementViewModel = hiltViewModel()
+
             SettlementScreen(
                 collectionId = collectionId,
                 viewModel = settlementViewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { successMessage ->
+                    // Only set success message if settlement actually happened
+                    successMessage?.let {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("success_message", it)
+                    }
+                    navController.popBackStack()
+                }
             )
         }
 
-        // Manage Members Screen
         composable(Screen.ManageMembers.route) { backStackEntry ->
             val collectionId = backStackEntry.arguments?.getString("collectionId")?.toLongOrNull()
-
             if (collectionId == null) {
                 navController.popBackStack()
                 return@composable
             }
 
             val manageMembersViewModel: ManageMembersViewModel = hiltViewModel()
+
             ManageMembersScreen(
                 collectionId = collectionId,
                 viewModel = manageMembersViewModel,
@@ -147,16 +175,13 @@ fun AppNavigationGraph(navController: NavHostController) {
             )
         }
 
-        // Edit Collection Screen (placeholder)
         composable(Screen.EditCollection.route) { backStackEntry ->
             val collectionId = backStackEntry.arguments?.getString("collectionId")?.toLongOrNull()
-
             if (collectionId == null) {
                 navController.popBackStack()
                 return@composable
             }
 
-            // For now, just navigate back
             navController.popBackStack()
         }
     }

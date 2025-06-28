@@ -19,6 +19,13 @@ data class MemberBalance(
     val netBalance: Double // positive = owed money, negative = owes money
 )
 
+// NEW: Add this data class
+data class UserCentricBalance(
+    val member: Member,
+    val amountOwedToUser: Double, // positive = they owe current user, negative = current user owes them
+    val isPositive: Boolean
+)
+
 data class Settlement(
     val fromMember: Member,
     val toMember: Member,
@@ -62,8 +69,7 @@ class ExpenseCalculator {
     ): List<MemberBalance> {
         return members.map { member ->
             val totalPaid = expenses.filter { it.paidByMemberId == member.id }.sumOf { it.amount }
-            val totalOwed =
-                expenses.filter { member.id in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+            val totalOwed = expenses.filter { member.id in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
             val netBalance = totalPaid - totalOwed
 
             MemberBalance(
@@ -75,15 +81,66 @@ class ExpenseCalculator {
         }
     }
 
+    // NEW: Calculate what each other member owes to the current user (excludes current user from results)
+    fun calculateUserCentricBalances(
+        expenses: List<Expense>,
+        members: List<Member>,
+        currentUserId: Long
+    ): List<UserCentricBalance> {
+        val userCentricBalances = mutableListOf<UserCentricBalance>()
+
+        // Get other members (excluding current user)
+        val otherMembers = members.filter { it.id != currentUserId }
+
+        otherMembers.forEach { otherMember ->
+            var amountOwedToUser = 0.0
+
+            // Check all expenses involving both users
+            expenses.forEach { expense ->
+                when {
+                    // Current user paid, other member is in split
+                    expense.paidByMemberId == currentUserId && otherMember.id in expense.splitAmongMemberIds -> {
+                        amountOwedToUser += expense.perPersonAmount
+                    }
+                    // Other member paid, current user is in split
+                    expense.paidByMemberId == otherMember.id && currentUserId in expense.splitAmongMemberIds -> {
+                        amountOwedToUser -= expense.perPersonAmount
+                    }
+                }
+            }
+
+            // Only include if there's an actual balance (avoid zero amounts)
+            if (kotlin.math.abs(amountOwedToUser) > 0.01) {
+                userCentricBalances.add(
+                    UserCentricBalance(
+                        member = otherMember,
+                        amountOwedToUser = amountOwedToUser,
+                        isPositive = amountOwedToUser > 0
+                    )
+                )
+            }
+        }
+
+        return userCentricBalances.sortedByDescending { it.amountOwedToUser }
+    }
+
+    // NEW: Calculate overall balance for current user
+    fun calculateCurrentUserOverallBalance(
+        expenses: List<Expense>,
+        members: List<Member>,
+        currentUserId: Long
+    ): Double {
+        val userCentricBalances = calculateUserCentricBalances(expenses, members, currentUserId)
+        return userCentricBalances.sumOf { it.amountOwedToUser }
+    }
+
     fun calculateSettlements(expenses: List<Expense>, members: List<Member>): List<Settlement> {
         val balances = calculateMemberBalances(expenses, members)
         val settlements = mutableListOf<Settlement>()
 
         // Separate creditors (positive balance) and debtors (negative balance)
-        val creditors = balances.filter { it.netBalance > 0 }.sortedByDescending { it.netBalance }
-            .toMutableList()
-        val debtors =
-            balances.filter { it.netBalance < 0 }.sortedBy { it.netBalance }.toMutableList()
+        val creditors = balances.filter { it.netBalance > 0 }.sortedByDescending { it.netBalance }.toMutableList()
+        val debtors = balances.filter { it.netBalance < 0 }.sortedBy { it.netBalance }.toMutableList()
 
         var i = 0
         var j = 0
@@ -91,7 +148,6 @@ class ExpenseCalculator {
         while (i < creditors.size && j < debtors.size) {
             val creditor = creditors[i]
             val debtor = debtors[j]
-
             val amount = minOf(creditor.netBalance, -debtor.netBalance)
 
             if (amount > 0.01) { // Avoid tiny settlements
@@ -132,7 +188,6 @@ class ExpenseCalculator {
         settledRecords: List<com.puneet8goyal.splitkaro.data.SettlementRecord> = emptyList()
     ): List<com.puneet8goyal.splitkaro.data.SettlementWithStatus> {
         val settlements = calculateSettlements(expenses, members)
-
         return settlements.map { settlement ->
             val settledRecord = settledRecords.find { record ->
                 record.fromMemberId == settlement.fromMember.id &&
@@ -150,8 +205,7 @@ class ExpenseCalculator {
 
     fun getMemberExpenseBreakdown(expenses: List<Expense>, memberId: Long): Pair<Double, Double> {
         val totalPaid = expenses.filter { it.paidByMemberId == memberId }.sumOf { it.amount }
-        val totalOwed =
-            expenses.filter { memberId in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+        val totalOwed = expenses.filter { memberId in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
         return Pair(totalPaid, totalOwed)
     }
 }

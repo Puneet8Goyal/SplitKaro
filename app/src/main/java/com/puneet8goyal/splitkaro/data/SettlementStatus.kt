@@ -2,9 +2,9 @@ package com.puneet8goyal.splitkaro.data
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-// Simple settlement tracking
 @Entity(
     tableName = "settlements",
     foreignKeys = [
@@ -14,10 +14,12 @@ import androidx.room.PrimaryKey
             childColumns = ["collectionId"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["collectionId"])] // FIXED: Add index for foreign key
 )
 data class SettlementRecord(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L, // FIXED: Use Long instead of kotlin.Unit
     val collectionId: Long,
     val fromMemberId: Long,
     val toMemberId: Long,

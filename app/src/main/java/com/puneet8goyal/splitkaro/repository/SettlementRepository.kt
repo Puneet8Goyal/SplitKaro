@@ -9,11 +9,13 @@ import javax.inject.Inject
 class SettlementRepository @Inject constructor(
     private val settlementDao: SettlementDao
 ) {
-    suspend fun insertSettlement(settlement: SettlementRecord): Result<Unit> =
+
+    suspend fun insertSettlement(settlement: SettlementRecord): Result<Long> =
         withContext(Dispatchers.IO) {
             try {
-                settlementDao.insertSettlement(settlement)
-                Result.success(Unit)
+                val id = settlementDao.insertSettlement(settlement)
+                println("DEBUG SettlementRepository: Inserted settlement record with ID: $id")
+                Result.success(id)
             } catch (e: Exception) {
                 println("DEBUG SettlementRepository: Error inserting settlement: ${e.message}")
                 Result.failure(e)
@@ -56,36 +58,4 @@ class SettlementRepository @Inject constructor(
                 Result.failure(e)
             }
         }
-
-    suspend fun saveSettlementsFromCalculation(
-        collectionId: Long,
-        settlements: List<com.puneet8goyal.splitkaro.domain.Settlement>
-    ): Result<List<SettlementRecord>> = withContext(Dispatchers.IO) {
-        try {
-            // Clear existing unsettled settlements
-            clearSettlements(collectionId)
-
-            // Save new settlements
-            val settlementRecords = settlements.map { settlement ->
-                SettlementRecord(
-                    collectionId = collectionId,
-                    fromMemberId = settlement.fromMember.id,
-                    toMemberId = settlement.toMember.id,
-                    amount = settlement.amount,
-                    isSettled = false,
-                    settledAt = null
-                )
-            }
-
-            settlementRecords.forEach { record ->
-                settlementDao.insertSettlement(record)
-            }
-
-            println("DEBUG SettlementRepository: Saved ${settlementRecords.size} new settlement records")
-            Result.success(settlementRecords)
-        } catch (e: Exception) {
-            println("DEBUG SettlementRepository: Error saving settlements: ${e.message}")
-            Result.failure(e)
-        }
-    }
 }

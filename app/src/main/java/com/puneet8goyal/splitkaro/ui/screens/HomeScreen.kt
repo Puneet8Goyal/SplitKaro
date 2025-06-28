@@ -1,33 +1,49 @@
 package com.puneet8goyal.splitkaro.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.TrendingDown
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -39,13 +55,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.puneet8goyal.splitkaro.ui.theme.AppTheme
 import com.puneet8goyal.splitkaro.utils.AppUtils
-import com.puneet8goyal.splitkaro.utils.MemberAvatar
+import com.puneet8goyal.splitkaro.utils.ModernLoadingState
+import com.puneet8goyal.splitkaro.utils.ModernSearchBar
+import com.puneet8goyal.splitkaro.utils.PremiumStatusCard
+import com.puneet8goyal.splitkaro.utils.StatusType
 import com.puneet8goyal.splitkaro.viewmodel.ExpenseCollectionViewModel
 import com.puneet8goyal.splitkaro.viewmodel.HomeViewModel
 
@@ -55,516 +78,691 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     collectionViewModel: ExpenseCollectionViewModel = hiltViewModel(),
     collectionId: Long,
+    initialSuccessMessage: String? = null,
+    initialErrorMessage: String? = null,
     onAddExpenseClick: () -> Unit,
     onEditExpenseClick: (Long) -> Unit,
     onSettlementClick: () -> Unit,
     onManageMembersClick: () -> Unit
 ) {
     val expenses = viewModel.expenses
-    val expenseSummary = viewModel.expenseSummary
     val isLoading = viewModel.isLoading
     val isRefreshing = viewModel.isRefreshing
     val errorMessage = viewModel.errorMessage
-    val searchQuery = viewModel.searchQuery
-    val hasActiveFilters = viewModel.hasActiveFilters()
-
     val collectionMembers by collectionViewModel.collectionMembers.collectAsState()
     val membersInThisCollection = collectionMembers[collectionId] ?: emptyList()
 
-    var showSearch by remember { mutableStateOf(false) }
+    // Search state
+    var searchQuery by remember { mutableStateOf("") }
+    var showSearchBar by remember { mutableStateOf(false) }
 
-    // Load data only once on first launch
+    // Navigation message state
+    var showNavigationSuccess by remember { mutableStateOf(initialSuccessMessage != null) }
+    var showNavigationError by remember { mutableStateOf(initialErrorMessage != null) }
+    var navigationSuccessMessage by remember { mutableStateOf(initialSuccessMessage ?: "") }
+    var navigationErrorMessage by remember { mutableStateOf(initialErrorMessage ?: "") }
+
+    // Filter expenses based on search
+    val filteredExpenses = remember(expenses, searchQuery, membersInThisCollection) {
+        if (searchQuery.isEmpty()) {
+            expenses
+        } else {
+            AppUtils.filterExpenses(expenses, searchQuery, membersInThisCollection)
+        }
+    }
+
     LaunchedEffect(collectionId) {
         viewModel.loadExpenses(collectionId)
         collectionViewModel.loadMembersForCollection(collectionId)
     }
 
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = {
-            viewModel.refreshExpenses(collectionId)
-        },
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
+            .background(AppTheme.colors.background)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refreshExpenses(collectionId) },
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Header
-            Text(
-                text = "Expenses",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Navigation Success Message (Top Priority)
+                AnimatedVisibility(
+                    visible = showNavigationSuccess && navigationSuccessMessage.isNotEmpty(),
+                    enter = slideInVertically(
+                        initialOffsetY = { -it },
+                        animationSpec = tween(400)
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut()
+                ) {
+                    Column {
+                        PremiumStatusCard(
+                            message = navigationSuccessMessage,
+                            type = StatusType.SUCCESS,
+                            onDismiss = {
+                                showNavigationSuccess = false
+                                navigationSuccessMessage = ""
+                            },
+                            autoDismiss = true,
+                            autoDismissDelay = 4000L,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                        )
+                        Spacer(modifier = Modifier.height(AppTheme.spacing.md))
+                    }
+                }
 
-            // Search button
-            OutlinedButton(
-                onClick = { showSearch = !showSearch },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (showSearch) Color(0xFF4CAF50) else Color.White,
-                    containerColor = Color.Transparent
-                ),
-                modifier = Modifier.fillMaxWidth()
+                // Navigation Error Message
+                AnimatedVisibility(
+                    visible = showNavigationError && navigationErrorMessage.isNotEmpty(),
+                    enter = slideInVertically(
+                        initialOffsetY = { -it },
+                        animationSpec = tween(400)
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut()
+                ) {
+                    Column {
+                        PremiumStatusCard(
+                            message = navigationErrorMessage,
+                            type = StatusType.ERROR,
+                            onDismiss = {
+                                showNavigationError = false
+                                navigationErrorMessage = ""
+                            },
+                            autoDismiss = true,
+                            autoDismissDelay = 5000L,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                        )
+                        Spacer(modifier = Modifier.height(AppTheme.spacing.md))
+                    }
+                }
+
+                // Modern Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AppTheme.spacing.xl, vertical = AppTheme.spacing.lg),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Expenses",
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = AppTheme.colors.onSurface
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
+                    ) {
+                        ModernIconButton(
+                            onClick = onManageMembersClick,
+                            icon = Icons.Default.Person,
+                            contentDescription = "Members"
+                        )
+                        ModernIconButton(
+                            onClick = { showSearchBar = !showSearchBar },
+                            icon = Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    }
+                }
+
+                // Search Bar
+                AnimatedVisibility(
+                    visible = showSearchBar,
+                    enter = slideInVertically(animationSpec = tween(300)) + fadeIn(),
+                    exit = slideOutVertically(animationSpec = tween(300)) + fadeOut()
+                ) {
+                    Column {
+                        ModernSearchBar(
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = { searchQuery = it },
+                            onSearchClear = {
+                                searchQuery = ""
+                                showSearchBar = false
+                            },
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                        )
+                        Spacer(modifier = Modifier.height(AppTheme.spacing.lg))
+                    }
+                }
+
+                // Add Members Recommendation when only current user exists
+                if (membersInThisCollection.size <= 1) {
+                    AddMembersRecommendationCard(
+                        onAddMembersClick = onManageMembersClick,
+                        modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                    )
+                    Spacer(modifier = Modifier.height(AppTheme.spacing.lg))
+                }
+
+                // Modern Balance Overview (only show if there are multiple members)
+                if (membersInThisCollection.size > 1) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = AppTheme.spacing.xl)
+                            .clickable { onSettlementClick() },
+                        colors = CardDefaults.cardColors(
+                            containerColor = AppTheme.colors.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 2.dp,
+                            pressedElevation = 8.dp
+                        ),
+                        shape = RoundedCornerShape(AppTheme.radius.xl),
+                        border = BorderStroke(1.dp, AppTheme.colors.border)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(AppTheme.spacing.xl),
+                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+                        ) {
+                            // Calculate user-centric balances
+                            val userCentricBalances = viewModel.calculateUserCentricBalances(
+                                expenses, membersInThisCollection
+                            )
+                            val overallBalance = viewModel.calculateCurrentUserOverallBalance(
+                                expenses, membersInThisCollection
+                            )
+
+                            // Overall status with icon
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
+                            ) {
+                                Icon(
+                                    imageVector = when {
+                                        overallBalance > 0 -> Icons.Outlined.TrendingUp
+                                        overallBalance < 0 -> Icons.Outlined.TrendingDown
+                                        else -> Icons.Outlined.Groups
+                                    },
+                                    contentDescription = null,
+                                    tint = when {
+                                        overallBalance > 0 -> AppTheme.colors.success
+                                        overallBalance < 0 -> AppTheme.colors.error
+                                        else -> AppTheme.colors.onSurface
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                )
+
+                                Text(
+                                    text = when {
+                                        overallBalance > 0 -> "You are owed ${AppUtils.formatCurrency(overallBalance)} overall"
+                                        overallBalance < 0 -> "You owe ${AppUtils.formatCurrency(-overallBalance)} overall"
+                                        else -> "You are settled up"
+                                    },
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.25).sp
+                                    ),
+                                    color = when {
+                                        overallBalance > 0 -> AppTheme.colors.success
+                                        overallBalance < 0 -> AppTheme.colors.error
+                                        else -> AppTheme.colors.onSurface
+                                    }
+                                )
+                            }
+
+                            // Individual member balances
+                            if (userCentricBalances.isNotEmpty()) {
+                                Divider(color = AppTheme.colors.border.copy(alpha = 0.5f))
+
+                                Text(
+                                    text = "Individual Balances",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = AppTheme.colors.onSurfaceVariant
+                                )
+
+                                userCentricBalances.forEach { balance ->
+                                    ModernBalanceRow(
+                                        label = balance.member.name,
+                                        amount = kotlin.math.abs(balance.amountOwedToUser),
+                                        isPositive = balance.isPositive
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(AppTheme.spacing.xl))
+                }
+
+                // Local Error message (lower priority than navigation messages)
+                AnimatedVisibility(
+                    visible = errorMessage.isNotEmpty(),
+                    enter = slideInVertically(animationSpec = tween(300)) + fadeIn(),
+                    exit = slideOutVertically(animationSpec = tween(300)) + fadeOut()
+                ) {
+                    PremiumStatusCard(
+                        message = errorMessage,
+                        type = StatusType.ERROR,
+                        onDismiss = { viewModel.clearErrorMessage() },
+                        modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                    )
+                }
+
+                // Modern Expense List
+                when {
+                    isLoading && expenses.isEmpty() -> {
+                        ModernLoadingState(message = "Loading expenses...")
+                    }
+                    filteredExpenses.isEmpty() && searchQuery.isNotEmpty() -> {
+                        ModernEmptyExpenseState(hasActiveFilters = true)
+                    }
+                    filteredExpenses.isEmpty() -> {
+                        ModernEmptyExpenseState(hasActiveFilters = false)
+                    }
+                    else -> {
+                        val groupedExpenses = AppUtils.groupExpensesByDate(filteredExpenses)
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm),
+                            contentPadding = PaddingValues(
+                                start = AppTheme.spacing.xl,
+                                end = AppTheme.spacing.xl,
+                                bottom = 100.dp
+                            )
+                        ) {
+                            groupedExpenses.forEach { (dateGroup, expensesInGroup) ->
+                                item {
+                                    ModernSectionHeader(
+                                        title = dateGroup,
+                                        modifier = Modifier.padding(vertical = AppTheme.spacing.sm)
+                                    )
+                                }
+
+                                items(expensesInGroup, key = { it.id }) { expense ->
+                                    ModernExpenseCard(
+                                        expense = expense,
+                                        members = membersInThisCollection,
+                                        currentUserId = viewModel.getCurrentUserId(),
+                                        onEditClick = { onEditExpenseClick(expense.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Modern Extended Floating Action Button (only show if there are multiple members)
+        if (membersInThisCollection.size > 1) {
+            ExtendedFloatingActionButton(
+                onClick = onAddExpenseClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(AppTheme.spacing.xl),
+                containerColor = AppTheme.colors.primary,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(AppTheme.radius.lg)
             ) {
                 Icon(
-                    imageVector = if (showSearch) Icons.Default.Clear else Icons.Default.Search,
-                    contentDescription = if (showSearch) "Close Search" else "Search",
-                    tint = if (showSearch) Color(0xFF4CAF50) else Color.White,
-                    modifier = Modifier.size(16.dp)
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Expense",
+                    modifier = Modifier.size(20.dp)
                 )
+                Spacer(modifier = Modifier.width(AppTheme.spacing.sm))
                 Text(
-                    if (showSearch) "Close Search" else "Search Expenses",
-                    color = if (showSearch) Color(0xFF4CAF50) else Color.White,
-                    modifier = Modifier.padding(start = 8.dp)
+                    "Add Expense",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold
+                    )
                 )
-            }
-
-            // Main action buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onManageMembersClick,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2196F3),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("👥 Members", color = Color.White, fontWeight = FontWeight.Medium)
-                }
-
-                Button(
-                    onClick = onSettlementClick,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("💰 Settlement", color = Color.White, fontWeight = FontWeight.Medium)
-                }
-            }
-
-            // Search bar
-            if (showSearch) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.searchExpenses(it) },
-                        label = { Text("Search expenses...", color = Color.Gray) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFF4CAF50))
-                        },
-                        trailingIcon = if (searchQuery.isNotBlank()) {
-                            {
-                                IconButton(onClick = { viewModel.searchExpenses("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color.Gray)
-                                }
-                            }
-                        } else null
-                    )
-                }
-            }
-
-            // Active filters
-            if (hasActiveFilters) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E3A5F)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "🔍 ${viewModel.getFilteredExpenseCount()}",
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Text(
-                            text = "Clear Filters",
-                            color = Color(0xFF64B5F6),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.clickable { viewModel.clearFilters() }
-                        )
-                    }
-                }
-            }
-
-            // Member info
-            if (membersInThisCollection.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "👥 Members (${membersInThisCollection.size}): ",
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            membersInThisCollection.take(4).forEach { member ->
-                                MemberAvatar(member = member, size = 28)
-                            }
-
-                            if (membersInThisCollection.size > 4) {
-                                Text(
-                                    text = "+${membersInThisCollection.size - 4}",
-                                    color = Color(0xFF4CAF50),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Error message
-            if (errorMessage.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4E1E1E)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clickable { viewModel.clearErrorMessage() },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Text(
-                        text = "⚠️ $errorMessage\n(Tap to dismiss)",
-                        color = Color(0xFFFF6B6B),
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            // Members warning
-            if (membersInThisCollection.isEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4E1E1E)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Text(
-                        text = "⚠️ No members in this collection!\nPlease add members first to start tracking expenses.",
-                        color = Color(0xFFFF6B6B),
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            // Content area
-            when {
-                isLoading && expenses.isEmpty() -> {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF4CAF50),
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-                            Text(
-                                text = "Loading expenses...",
-                                color = Color.White,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                }
-
-                expenses.isEmpty() -> {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = if (hasActiveFilters) "🔍" else "📝",
-                                style = MaterialTheme.typography.headlineLarge,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-                            Text(
-                                text = if (hasActiveFilters) "No expenses match your search" else "No expenses yet!\nPull down to refresh or add your first expense.",
-                                color = Color.Gray,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                }
-
-                else -> {
-                    // UPDATED: Debt/Lending Summary Card (same as settlement screen)
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                            .clickable { onSettlementClick() },
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "💰 Financial Overview",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = "Tap for details →",
-                                    color = Color(0xFF4CAF50),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-
-                            // Calculate debt summary from expenses
-                            val memberBalances = viewModel.calculateMemberBalances(expenses, membersInThisCollection)
-                            val totalOwed = memberBalances.filter { it.netBalance < 0 }.sumOf { -it.netBalance }
-                            val totalToReceive = memberBalances.filter { it.netBalance > 0 }.sumOf { it.netBalance }
-                            val peopleInDebt = memberBalances.count { it.netBalance < 0 }
-                            val peopleToReceive = memberBalances.count { it.netBalance > 0 }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                // Total debt column
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "💸 Total Owed",
-                                        color = Color(0xFFFF6B6B),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = AppUtils.formatCurrency(totalOwed),
-                                        color = Color(0xFFFF6B6B),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (peopleInDebt > 0) {
-                                        Text(
-                                            text = "by $peopleInDebt people",
-                                            color = Color.Gray,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-
-                                // Total to receive column
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.End
-                                ) {
-                                    Text(
-                                        text = "💚 To Receive",
-                                        color = Color(0xFF4CAF50),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = AppUtils.formatCurrency(totalToReceive),
-                                        color = Color(0xFF4CAF50),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (peopleToReceive > 0) {
-                                        Text(
-                                            text = "by $peopleToReceive people",
-                                            color = Color.Gray,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Quick balance status
-                            Text(
-                                text = when {
-                                    totalOwed == 0.0 && totalToReceive == 0.0 -> "🎉 Everyone is settled!"
-                                    totalOwed > totalToReceive -> "⚠️ More debt than lending"
-                                    totalToReceive > totalOwed -> "✅ More lending than debt"
-                                    else -> "⚖️ Debt and lending balanced"
-                                },
-                                color = when {
-                                    totalOwed == 0.0 && totalToReceive == 0.0 -> Color(0xFF4CAF50)
-                                    totalOwed > totalToReceive -> Color(0xFFFF6B6B)
-                                    totalToReceive > totalOwed -> Color(0xFF4CAF50)
-                                    else -> Color(0xFF64B5F6)
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                    }
-
-                    // Expense list
-                    val groupedExpenses = viewModel.getGroupedExpenses()
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        groupedExpenses.forEach { (dateGroup, expensesInGroup) ->
-                            item {
-                                Text(
-                                    text = "📅 $dateGroup",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = Color(0xFF4CAF50),
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
-                                )
-                            }
-
-                            items(expensesInGroup, key = { it.id }) { expense ->
-                                ExpenseCard(
-                                    expense = expense,
-                                    members = membersInThisCollection,
-                                    onEditClick = { onEditExpenseClick(expense.id) }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // FAB
-            FloatingActionButton(
-                onClick = onAddExpenseClick,
-                modifier = Modifier.padding(top = 16.dp),
-                containerColor = Color(0xFF4CAF50),
-                contentColor = Color.White
-            ) {
-                Text("+ Add Expense", color = Color.White, fontWeight = FontWeight.Medium)
             }
         }
     }
 }
 
 @Composable
-fun ExpenseCard(
-    expense: com.puneet8goyal.splitkaro.data.Expense,
-    members: List<com.puneet8goyal.splitkaro.data.Member>,
-    onEditClick: () -> Unit
+fun AddMembersRecommendationCard(
+    onAddMembersClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E)),
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = AppTheme.colors.primaryContainer.copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(AppTheme.radius.lg),
+        border = BorderStroke(1.dp, AppTheme.colors.primary.copy(alpha = 0.3f))
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(AppTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = expense.description,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            AppTheme.colors.primary.copy(alpha = 0.1f),
+                            RoundedCornerShape(AppTheme.radius.md)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.PersonAdd,
+                        contentDescription = null,
+                        tint = AppTheme.colors.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
-                Text(
-                    text = "💰 ${AppUtils.formatCurrency(expense.amount)}",
-                    color = Color(0xFF4CAF50),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+                Column {
+                    Text(
+                        text = "Add Members to Get Started",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.25).sp
+                        ),
+                        color = AppTheme.colors.onSurface
+                    )
 
-                Text(
-                    text = "Paid by: ${members.find { it.id == expense.paidByMemberId }?.name ?: "Unknown"}",
-                    color = Color(0xFFBBBBBB),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-
-                Text(
-                    text = "Per person: ${AppUtils.formatCurrency(expense.perPersonAmount)} • Split ${expense.splitAmongMemberIds.size} ways",
-                    color = Color(0xFFBBBBBB),
-                    style = MaterialTheme.typography.bodySmall
-                )
+                    Text(
+                        text = "You need at least 2 people to split expenses",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = AppTheme.colors.onSurfaceVariant
+                    )
+                }
             }
 
-            IconButton(
-                onClick = onEditClick,
-                modifier = Modifier
-                    .background(Color(0xFF4CAF50), RoundedCornerShape(50))
-                    .size(44.dp)
+            Button(
+                onClick = onAddMembersClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppTheme.colors.primary,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(AppTheme.radius.md),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 2.dp,
+                    pressedElevation = 6.dp
+                )
             ) {
                 Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Expense",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(AppTheme.spacing.sm))
+                Text(
+                    "Add Members",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold
+                    )
                 )
             }
         }
     }
+}
+
+@Composable
+fun ModernIconButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(40.dp)
+            .background(
+                AppTheme.colors.surfaceContainer,
+                RoundedCornerShape(AppTheme.radius.md)
+            )
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = AppTheme.colors.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+fun ModernBalanceRow(
+    label: String,
+    amount: Double,
+    isPositive: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = if (isPositive) "$label owes you" else "You owe $label",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Medium
+            ),
+            color = AppTheme.colors.onSurfaceVariant
+        )
+
+        Text(
+            text = AppUtils.formatCurrency(amount),
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.25).sp
+            ),
+            color = if (isPositive) AppTheme.colors.success else AppTheme.colors.error
+        )
+    }
+}
+
+@Composable
+fun ModernExpenseCard(
+    expense: com.puneet8goyal.splitkaro.data.Expense,
+    members: List<com.puneet8goyal.splitkaro.data.Member>,
+    currentUserId: Long,
+    onEditClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEditClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = AppTheme.colors.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp,
+            pressedElevation = 4.dp
+        ),
+        shape = RoundedCornerShape(AppTheme.radius.lg),
+        border = BorderStroke(1.dp, AppTheme.colors.border)
+    ) {
+        Row(
+            modifier = Modifier.padding(AppTheme.spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                AppTheme.colors.primaryContainer,
+                                AppTheme.colors.primaryContainer.copy(alpha = 0.7f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(AppTheme.radius.md)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ShoppingCart,
+                    contentDescription = null,
+                    tint = AppTheme.colors.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = expense.description,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.25).sp
+                    ),
+                    color = AppTheme.colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = "${members.find { it.id == expense.paidByMemberId }?.name ?: "Unknown"} paid ${AppUtils.formatCurrency(expense.amount)}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = AppTheme.colors.onSurfaceVariant
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                val isPaidByCurrentUser = expense.paidByMemberId == currentUserId
+                val isCurrentUserInSplit = currentUserId in expense.splitAmongMemberIds
+
+                when {
+                    isPaidByCurrentUser && isCurrentUserInSplit -> {
+                        Text(
+                            text = "you lent",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = AppTheme.colors.success,
+                            fontSize = 10.sp
+                        )
+                        Text(
+                            text = AppUtils.formatCurrency(expense.amount - expense.perPersonAmount),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.25).sp
+                            ),
+                            color = AppTheme.colors.success
+                        )
+                    }
+                    !isPaidByCurrentUser && isCurrentUserInSplit -> {
+                        Text(
+                            text = "you borrowed",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = AppTheme.colors.error,
+                            fontSize = 10.sp
+                        )
+                        Text(
+                            text = AppUtils.formatCurrency(expense.perPersonAmount),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.25).sp
+                            ),
+                            color = AppTheme.colors.error
+                        )
+                    }
+                    isPaidByCurrentUser && !isCurrentUserInSplit -> {
+                        Text(
+                            text = "you paid",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = AppTheme.colors.onSurfaceVariant,
+                            fontSize = 10.sp
+                        )
+                        Text(
+                            text = AppUtils.formatCurrency(expense.amount),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.25).sp
+                            ),
+                            color = AppTheme.colors.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ModernEmptyExpenseState(hasActiveFilters: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(AppTheme.spacing.huge),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
+        ) {
+            Text(
+                text = if (hasActiveFilters) "🔍" else "💰",
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontSize = 64.sp
+                )
+            )
+
+            Text(
+                text = if (hasActiveFilters) "No matching expenses" else "No expenses yet",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.25).sp
+                ),
+                color = AppTheme.colors.onSurface,
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = if (hasActiveFilters)
+                    "Try adjusting your search criteria"
+                else
+                    "Add your first expense to get started",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 24.sp
+                ),
+                color = AppTheme.colors.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun ModernSectionHeader(
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall.copy(
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        ),
+        color = AppTheme.colors.onSurfaceVariant,
+        modifier = modifier
+    )
 }
