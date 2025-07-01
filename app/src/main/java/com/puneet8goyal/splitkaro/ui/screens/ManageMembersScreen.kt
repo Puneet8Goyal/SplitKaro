@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -59,18 +61,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.puneet8goyal.splitkaro.ui.theme.AppTheme
+import com.puneet8goyal.splitkaro.ui.theme.ResponsiveSpacing
 import com.puneet8goyal.splitkaro.utils.MemberAvatar
 import com.puneet8goyal.splitkaro.utils.ModernLoadingState
 import com.puneet8goyal.splitkaro.utils.PremiumStatusCard
 import com.puneet8goyal.splitkaro.utils.StatusType
 import com.puneet8goyal.splitkaro.viewmodel.ManageMembersViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageMembersScreen(
     collectionId: Long,
     viewModel: ManageMembersViewModel = hiltViewModel(),
-    onBackClick: () -> Unit = {}
+    onBackClick: (String?) -> Unit = { _ -> } // Updated to accept success message
 ) {
     val collectionMembers by viewModel.collectionMembers.collectAsState()
     val allMembers by viewModel.allMembers.collectAsState()
@@ -83,6 +87,21 @@ fun ManageMembersScreen(
     val memberToRemove = viewModel.memberToRemove
     val availableMembers = viewModel.getAvailableMembers()
 
+    // RESPONSIVE: Screen configuration
+    val configuration = LocalConfiguration.current
+    val horizontalPadding = ResponsiveSpacing.adaptiveHorizontal()
+
+    // Auto-navigate back with success message when member operations succeed
+    LaunchedEffect(snackbarMessage) {
+        if (snackbarMessage.contains("success", ignoreCase = true) ||
+            snackbarMessage.contains("added", ignoreCase = true) ||
+            snackbarMessage.contains("removed", ignoreCase = true)
+        ) {
+            delay(2000) // Show message briefly
+            onBackClick(snackbarMessage) // Pass message back to HomeScreen
+        }
+    }
+
     LaunchedEffect(collectionId) {
         viewModel.loadData(collectionId)
     }
@@ -91,11 +110,12 @@ fun ManageMembersScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AppTheme.colors.background)
+            .systemBarsPadding()
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Top positioned success/error messages - EXACTLY like other screens
+            // Top positioned success/error messages
             AnimatedVisibility(
                 visible = snackbarMessage.isNotEmpty(),
                 enter = slideInVertically(
@@ -113,18 +133,17 @@ fun ManageMembersScreen(
                         type = if (snackbarMessage.contains("success", ignoreCase = true) ||
                             snackbarMessage.contains("added", ignoreCase = true) ||
                             snackbarMessage.contains("removed", ignoreCase = true)
-                        )
-                            StatusType.SUCCESS else StatusType.ERROR,
+                        ) StatusType.SUCCESS else StatusType.ERROR,
                         onDismiss = { viewModel.clearMessage() },
                         autoDismiss = true,
                         autoDismissDelay = 3000L,
-                        modifier = Modifier.padding(horizontal = AppTheme.spacing.xl)
+                        modifier = Modifier.padding(horizontal = horizontalPadding)
                     )
                     Spacer(modifier = Modifier.height(AppTheme.spacing.md))
                 }
             }
 
-            // Top App Bar - EXACTLY like other screens
+            // Top App Bar
             TopAppBar(
                 title = {
                     Text(
@@ -137,7 +156,7 @@ fun ManageMembersScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = { onBackClick(null) }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
@@ -150,7 +169,7 @@ fun ManageMembersScreen(
                 )
             )
 
-            // Content - EXACTLY like other screens
+            // Content
             when {
                 isLoading -> {
                     ModernLoadingState(message = "Loading members...")
@@ -161,10 +180,10 @@ fun ManageMembersScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = AppTheme.spacing.xl),
+                            .padding(horizontal = horizontalPadding),
                         verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.xl)
                     ) {
-                        // Group Info - SAME style as other cards
+                        // Group Info
                         collection?.let {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -185,6 +204,7 @@ fun ManageMembersScreen(
                                         tint = AppTheme.colors.primary,
                                         modifier = Modifier.size(32.dp)
                                     )
+
                                     Column {
                                         Text(
                                             text = it.name,
@@ -194,6 +214,7 @@ fun ManageMembersScreen(
                                             ),
                                             color = AppTheme.colors.onSurface
                                         )
+
                                         Text(
                                             text = "${collectionMembers.size} ${if (collectionMembers.size == 1) "member" else "members"}",
                                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -206,7 +227,7 @@ fun ManageMembersScreen(
                             }
                         }
 
-                        // Current Members List - SAME style as expense cards
+                        // Current Members List
                         if (collectionMembers.isEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -274,6 +295,7 @@ fun ManageMembersScreen(
                                                 ),
                                                 color = AppTheme.colors.onSurface
                                             )
+
                                             Text(
                                                 text = "Member",
                                                 style = MaterialTheme.typography.bodySmall.copy(
@@ -299,7 +321,7 @@ fun ManageMembersScreen(
                             }
                         }
 
-                        // Available Members - SAME style
+                        // Available Members
                         if (availableMembers.isNotEmpty()) {
                             Text(
                                 text = "Add Existing Members",
@@ -368,7 +390,7 @@ fun ManageMembersScreen(
             }
         }
 
-        // Floating Action Button - EXACTLY like other screens
+        // Floating Action Button
         ExtendedFloatingActionButton(
             onClick = { viewModel.openAddMemberDialog() },
             modifier = Modifier
@@ -392,7 +414,7 @@ fun ManageMembersScreen(
             )
         }
 
-        // Dialogs - EXACTLY like other screens
+        // Dialogs
         if (showAddMemberDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.closeAddMemberDialog() },
@@ -500,7 +522,7 @@ fun ManageMembersScreen(
                 },
                 text = {
                     Text(
-                        "Are you sure you want to remove '${memberToRemove!!.name}' from this group? They will no longer be able to participate in expenses for this group.",
+                        "Are you sure you want to remove '${memberToRemove!!.name}' from this collection? They will no longer be able to participate in expenses for this collection.",
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Medium
                         ),

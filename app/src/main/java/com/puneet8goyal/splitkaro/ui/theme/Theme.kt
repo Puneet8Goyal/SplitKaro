@@ -12,11 +12,66 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
+
+// RESPONSIVE SPACING SYSTEM - ADD THIS
+object ResponsiveSpacing {
+    @Composable
+    fun xs() = with(LocalDensity.current) { 4.dp }
+
+    @Composable
+    fun sm() = with(LocalDensity.current) { 8.dp }
+
+    @Composable
+    fun md() = with(LocalDensity.current) { 12.dp }
+
+    @Composable
+    fun lg() = with(LocalDensity.current) { 16.dp }
+
+    @Composable
+    fun xl() = with(LocalDensity.current) { 20.dp }
+
+    @Composable
+    fun xxl() = with(LocalDensity.current) { 24.dp }
+
+    @Composable
+    fun xxxl() = with(LocalDensity.current) { 32.dp }
+
+    @Composable
+    fun huge() = with(LocalDensity.current) { 40.dp }
+
+    // Screen-size adaptive spacing
+    @Composable
+    fun adaptiveHorizontal(): Dp {
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp.dp
+        return when {
+            screenWidth < 360.dp -> 12.dp  // Small phones
+            screenWidth < 480.dp -> 16.dp  // Normal phones
+            screenWidth < 600.dp -> 20.dp  // Large phones
+            screenWidth < 840.dp -> 24.dp  // Small tablets
+            else -> 32.dp                  // Large tablets
+        }
+    }
+
+    @Composable
+    fun adaptiveVertical(): Dp {
+        val configuration = LocalConfiguration.current
+        val screenHeight = configuration.screenHeightDp.dp
+        return when {
+            screenHeight < 640.dp -> 8.dp   // Short screens
+            screenHeight < 800.dp -> 12.dp  // Normal screens
+            else -> 16.dp                   // Tall screens
+        }
+    }
+}
 
 // Modern Typography System (2025 standards)
 val ModernTypography = androidx.compose.material3.Typography(
@@ -42,7 +97,6 @@ val ModernTypography = androidx.compose.material3.Typography(
         lineHeight = 32.sp,
         letterSpacing = 0.sp
     ),
-
     // Headline styles - for section headers
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,
@@ -65,7 +119,6 @@ val ModernTypography = androidx.compose.material3.Typography(
         lineHeight = 24.sp,
         letterSpacing = 0.sp
     ),
-
     // Title styles - for card titles and important text
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
@@ -88,7 +141,6 @@ val ModernTypography = androidx.compose.material3.Typography(
         lineHeight = 18.sp,
         letterSpacing = 0.1.sp
     ),
-
     // Body styles - for main content
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
@@ -111,7 +163,6 @@ val ModernTypography = androidx.compose.material3.Typography(
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     ),
-
     // Label styles - for buttons and small text
     labelLarge = TextStyle(
         fontFamily = FontFamily.Default,
@@ -355,7 +406,7 @@ private val DarkColorScheme = darkColorScheme(
     error = Color(0xFFEF4444),
     onError = Color(0xFFFFFFFF),
     errorContainer = Color(0xFF3F1515),
-    onErrorContainer = Color(0xFFFEE2E2),
+    onErrorContainer = Color(0xFFEE2E2),
     background = Color(0xFF0A0A0F),
     onBackground = Color(0xFFF5F5F7),
     surface = Color(0xFF12121A),

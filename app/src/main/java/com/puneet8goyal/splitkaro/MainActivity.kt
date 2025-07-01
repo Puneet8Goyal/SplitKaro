@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +31,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     @Inject
     lateinit var userPreferences: UserPreferences
 
@@ -57,7 +58,6 @@ fun App(
     var isCheckingUser by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
-    // Check if user needs onboarding immediately when app starts
     LaunchedEffect(Unit) {
         showOnboarding = userPreferences.isFirstTimeUser()
         isCheckingUser = false
@@ -67,22 +67,20 @@ fun App(
         modifier = Modifier
             .fillMaxSize()
             .background(AppTheme.colors.background)
+            .systemBarsPadding()  // CRITICAL: Fixes status bar overlap
+            .navigationBarsPadding()  // CRITICAL: Fixes navigation bar overlap
     ) {
-        // Show main app only after user is set up
         if (!isCheckingUser && !showOnboarding) {
             AppNavigationGraph(navController)
         }
 
-        // Show onboarding dialog immediately if first-time user
         if (showOnboarding) {
             UserOnboardingDialog(
                 onUserInfoSubmitted = { userName ->
                     scope.launch {
-                        // Create Member record for current user
                         val member = Member(name = userName)
                         memberRepository.insertMember(member).fold(
                             onSuccess = { generatedMemberId ->
-                                // Store user info
                                 userPreferences.setCurrentUserName(userName)
                                 userPreferences.setCurrentUserMemberId(generatedMemberId)
                                 showOnboarding = false
@@ -90,7 +88,6 @@ fun App(
                             },
                             onFailure = { exception ->
                                 println("DEBUG: Failed to create user member: ${exception.message}")
-                                // Fallback - still save the name
                                 userPreferences.setCurrentUserName(userName)
                                 showOnboarding = false
                             }
