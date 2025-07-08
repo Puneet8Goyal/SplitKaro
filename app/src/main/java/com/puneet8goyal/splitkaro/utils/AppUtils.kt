@@ -53,7 +53,8 @@ object AppUtils {
             // Search in description
             expense.description.lowercase().contains(query) ||
                     // Search in payer name
-                    members.find { it.id == expense.paidByMemberId }?.name?.lowercase()?.contains(query) == true ||
+                    members.find { it.id == expense.paidByMemberId }?.name?.lowercase()
+                        ?.contains(query) == true ||
                     // Search in amount
                     expense.amount.toString().contains(query)
         }
@@ -63,7 +64,10 @@ object AppUtils {
     fun groupExpensesByDate(expenses: List<Expense>): Map<String, List<Expense>> {
         val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         val today = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date())
-        val yesterday = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000))
+        val yesterday = SimpleDateFormat(
+            "MMM dd, yyyy",
+            Locale.getDefault()
+        ).format(Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000))
 
         return expenses
             .sortedByDescending { it.createdAt }

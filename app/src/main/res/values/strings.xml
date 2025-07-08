@@ -1,3 +1,116 @@
 <resources>
     <string name="app_name">SplitKaro</string>
+
+    <!-- Enhanced Welcome & Onboarding -->
+    <string name="welcome_message">Welcome to SplitKaro!</string>
+    <string name="welcome_subtitle">Create your first collection to start splitting expenses with friends and family</string>
+    <string name="enter_your_name">Enter your name</string>
+    <string name="get_started">Get Started</string>
+    <string name="setting_up">Setting up…</string>
+
+    <!-- Enhanced Collections -->
+    <string name="your_collections">Your Collections</string>
+    <string name="new_collection">New Collection</string>
+    <string name="create_new_collection">Create New Collection</string>
+    <string name="collection_name">Collection Name</string>
+    <string name="collection_name_hint">e.g., Weekend Trip, House Expenses</string>
+    <string name="create_collection">Create Collection</string>
+    <string name="creating">Creating…</string>
+    <string name="collections_refreshed">Collections refreshed successfully</string>
+    <string name="collection_created_success">Group \'%1$s\' created successfully!</string>
+    <string name="collection_deleted_success">Group deleted successfully!</string>
+
+    <!-- Enhanced Expenses -->
+    <string name="expenses">Expenses</string>
+    <string name="add_expense">Add Expense</string>
+    <string name="adding">Adding…</string>
+    <string name="updating">Updating…</string>
+    <string name="no_expenses_yet">No expenses yet</string>
+    <string name="start_by_adding_expense">Start by adding your first expense!</string>
+    <string name="expense_description">Description</string>
+    <string name="expense_description_hint">What was this expense for?</string>
+    <string name="amount">Amount</string>
+    <string name="amount_hint">0.00</string>
+    <string name="who_paid">Who paid?</string>
+    <string name="split_among">Split among</string>
+    <string name="expense_details">Expense Details</string>
+
+    <!-- Enhanced Members -->
+    <string name="members">Members</string>
+    <string name="member_name">Member Name</string>
+    <string name="add_member">Add Member</string>
+    <string name="manage_members">Manage Members</string>
+    <string name="no_members_yet">No members yet</string>
+    <string name="add_members_to_start">Add some members to start splitting expenses!</string>
+    <string name="member_added_success">\'%1$s\' added to group successfully!</string>
+
+    <!-- Enhanced Settlement -->
+    <string name="settlement">Settlement</string>
+    <string name="settle">Settle</string>
+    <string name="settled">✓ Settled</string>
+    <string name="all_settled">All Settled!</string>
+    <string name="perfect_balance">Perfect Balance!</string>
+
+    <!-- Enhanced Success Messages -->
+    <string name="expense_added_success">✅ Expense added successfully!</string>
+    <string name="expense_updated_success">✅ Expense updated successfully!</string>
+    <string name="expense_deleted_success">🗑️ Expense deleted successfully!</string>
+    <string name="settlement_completed_success">💰 Settlement completed successfully!</string>
+
+    <!-- Enhanced Error Messages -->
+    <string name="error_loading_collections">Failed to load collections</string>
+    <string name="error_refreshing_collections">Failed to refresh collections</string>
+    <string name="error_loading_members">Failed to load members</string>
+    <string name="error_creating_collection">Failed to create collection</string>
+    <string name="error_deleting_collection">Failed to delete collection</string>
+    <string name="error_creating_member">Failed to create member</string>
+    <string name="error_adding_member_to_collection">Failed to add member to collection</string>
+    <string name="error_adding_user_to_collection">Collection created but failed to add you as member</string>
+    <string name="error_duplicate_collection_name">A group with this name already exists</string>
+    <string name="error_duplicate_member_name">A member with this name already exists in this group</string>
+    <string name="error_user_not_setup">User not properly set up. Please restart the app</string>
+
+    <!-- Enhanced Validation Messages -->
+    <string name="error_description_required">Description is required</string>
+    <string name="error_amount_required">Amount is required</string>
+    <string name="error_amount_invalid">Amount must be greater than 0</string>
+    <string name="error_paid_by_required">Please select who paid</string>
+    <string name="error_split_members_required">Select at least one person to split among</string>
+    <string name="error_collection_name_required">Collection name is required</string>
+    <string name="error_member_name_required">Member name is required</string>
+
+    <!-- Enhanced UI Labels -->
+    <string name="collections_empty_title">Welcome to SplitKaro!</string>
+    <string name="collections_empty_subtitle">Create your first collection to start splitting expenses</string>
+    <string name="collections_loading">Loading collections…</string>
+    <string name="members_loading">Loading members…</string>
+    <string name="data_refreshing">Refreshing data…</string>
+
+    <!-- Enhanced Button Labels -->
+    <string name="button_retry">Retry</string>
+    <string name="button_refresh">Refresh</string>
+    <string name="button_dismiss">Dismiss</string>
+
+    <!-- Enhanced Status Messages -->
+    <string name="status_all_up_to_date">Everything is up to date</string>
+    <string name="status_syncing">Syncing data…</string>
+
+    <!-- Enhanced Accessibility -->
+    <string name="content_description_refresh">Refresh collections</string>
+    <string name="content_description_add_collection">Add new collection</string>
+    <string name="content_description_collection_options">Collection options</string>
+
+    <!-- Time and Date -->
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%1$d minutes ago</string>
+    <string name="time_hours_ago">%1$d hours ago</string>
+    <string name="time_days_ago">%1$d days ago</string>
+
+    <!-- Common -->
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="back">Back</string>
+    <string name="loading">Loading…</string>
+    <string name="search">Search</string>
+    <string name="clear">Clear</string>
 </resources>

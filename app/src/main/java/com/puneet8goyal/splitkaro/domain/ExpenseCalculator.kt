@@ -69,7 +69,8 @@ class ExpenseCalculator {
     ): List<MemberBalance> {
         return members.map { member ->
             val totalPaid = expenses.filter { it.paidByMemberId == member.id }.sumOf { it.amount }
-            val totalOwed = expenses.filter { member.id in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+            val totalOwed =
+                expenses.filter { member.id in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
             val netBalance = totalPaid - totalOwed
 
             MemberBalance(
@@ -139,8 +140,10 @@ class ExpenseCalculator {
         val settlements = mutableListOf<Settlement>()
 
         // Separate creditors (positive balance) and debtors (negative balance)
-        val creditors = balances.filter { it.netBalance > 0 }.sortedByDescending { it.netBalance }.toMutableList()
-        val debtors = balances.filter { it.netBalance < 0 }.sortedBy { it.netBalance }.toMutableList()
+        val creditors = balances.filter { it.netBalance > 0 }.sortedByDescending { it.netBalance }
+            .toMutableList()
+        val debtors =
+            balances.filter { it.netBalance < 0 }.sortedBy { it.netBalance }.toMutableList()
 
         var i = 0
         var j = 0
@@ -205,7 +208,8 @@ class ExpenseCalculator {
 
     fun getMemberExpenseBreakdown(expenses: List<Expense>, memberId: Long): Pair<Double, Double> {
         val totalPaid = expenses.filter { it.paidByMemberId == memberId }.sumOf { it.amount }
-        val totalOwed = expenses.filter { memberId in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
+        val totalOwed =
+            expenses.filter { memberId in it.splitAmongMemberIds }.sumOf { it.perPersonAmount }
         return Pair(totalPaid, totalOwed)
     }
 }

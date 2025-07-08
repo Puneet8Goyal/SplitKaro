@@ -6,30 +6,41 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.puneet8goyal.splitkaro.data.Expense
-import com.puneet8goyal.splitkaro.repository.ExpenseRepository
-import com.puneet8goyal.splitkaro.repository.MemberRepository
+import com.puneet8goyal.splitkaro.repository.interfaces.ExpenseRepositoryInterface
+import com.puneet8goyal.splitkaro.repository.interfaces.MemberRepositoryInterface
+import com.puneet8goyal.splitkaro.utils.AppConfig
+import com.puneet8goyal.splitkaro.utils.ValidationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AddExpenseViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository,
-    private val memberRepository: MemberRepository
+    private val expenseRepository: ExpenseRepositoryInterface,
+    private val memberRepository: MemberRepositoryInterface,
+    private val appConfig: AppConfig
 ) : ViewModel() {
 
+    private val validationHelper = ValidationHelper(appConfig)
+
     var description by mutableStateOf("")
+        private set
     var amount by mutableStateOf("")
+        private set
     var paidByMemberId by mutableStateOf<Long?>(null)
+        private set
     var splitAmongMemberIds by mutableStateOf<List<Long>>(emptyList())
+        private set
     var snackbarMessage by mutableStateOf("")
+        private set
     var isLoading by mutableStateOf(false)
+        private set
 
     fun addExpense(collectionId: Long, onSuccess: () -> Unit) {
         if (isLoading) return
 
         snackbarMessage = ""
-        val validationError = validateInputs()
+        val validationError = validateAllInputs()
         if (validationError != null) {
             snackbarMessage = validationError
             return
@@ -40,7 +51,7 @@ class AddExpenseViewModel @Inject constructor(
             try {
                 val expenseAmount = amount.toDouble()
                 val splitCount = splitAmongMemberIds.size
-                val perPerson = expenseAmount / splitCount
+                val perPersonAmount = expenseAmount / splitCount
 
                 val expense = Expense(
                     collectionId = collectionId,
@@ -48,15 +59,13 @@ class AddExpenseViewModel @Inject constructor(
                     amount = expenseAmount,
                     paidByMemberId = paidByMemberId!!,
                     splitAmongMemberIds = splitAmongMemberIds,
-                    perPersonAmount = perPerson,
+                    perPersonAmount = perPersonAmount,
                     createdAt = System.currentTimeMillis()
                 )
 
-                val result = expenseRepository.insertExpense(expense)
-                result.fold(
+                expenseRepository.insertExpense(expense).fold(
                     onSuccess = {
-                        clearInputs()
-                        // FIXED: Don't show success snackbar here, pass to navigation
+                        clearForm()
                         onSuccess()
                     },
                     onFailure = { exception ->
@@ -71,18 +80,15 @@ class AddExpenseViewModel @Inject constructor(
         }
     }
 
-    private fun validateInputs(): String? {
-        return when {
-            description.trim().isEmpty() -> "Description is required"
-            amount.isEmpty() -> "Amount is required"
-            amount.toDoubleOrNull()?.let { it <= 0 } != false -> "Amount must be greater than 0"
-            paidByMemberId == null -> "Paid by is required"
-            splitAmongMemberIds.isEmpty() -> "Select at least one person to split among"
-            else -> null
-        }
+    private fun validateAllInputs(): String? {
+        validationHelper.validateExpenseDescription(description)?.let { return it }
+        validationHelper.validateAmount(amount)?.let { return it }
+        validationHelper.validatePaidBy(paidByMemberId)?.let { return it }
+        validationHelper.validateSplitMembers(splitAmongMemberIds)?.let { return it }
+        return null
     }
 
-    fun clearInputs() {
+    private fun clearForm() {
         description = ""
         amount = ""
         paidByMemberId = null
@@ -92,25 +98,31 @@ class AddExpenseViewModel @Inject constructor(
 
     fun updateDescription(value: String) {
         description = value
-        if (snackbarMessage.isNotEmpty()) clearErrorMessage()
+        clearErrorIfExists()
     }
 
     fun updateAmount(value: String) {
         amount = value
-        if (snackbarMessage.isNotEmpty()) clearErrorMessage()
+        clearErrorIfExists()
     }
 
     fun updatePaidByMemberId(memberId: Long?) {
         paidByMemberId = memberId
-        if (snackbarMessage.isNotEmpty()) clearErrorMessage()
+        clearErrorIfExists()
     }
 
     fun updateSplitAmongMemberIds(memberIds: List<Long>) {
         splitAmongMemberIds = memberIds
-        if (snackbarMessage.isNotEmpty()) clearErrorMessage()
+        clearErrorIfExists()
     }
 
     fun clearErrorMessage() {
         snackbarMessage = ""
+    }
+
+    private fun clearErrorIfExists() {
+        if (snackbarMessage.isNotEmpty()) {
+            snackbarMessage = ""
+        }
     }
 }

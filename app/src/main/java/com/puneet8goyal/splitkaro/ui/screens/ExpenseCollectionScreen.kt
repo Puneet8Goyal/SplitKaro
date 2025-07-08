@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,8 +33,6 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -88,8 +85,11 @@ fun ExpenseCollectionScreen(
     initialErrorMessage: String? = null,
     onCollectionClick: (Long) -> Unit
 ) {
+    // FIXED: Correct property access using StateFlow
     val collections by viewModel.collections.collectAsState()
     val collectionMembers by viewModel.collectionMembers.collectAsState()
+
+    // FIXED: Direct property access (not function calls)
     val isLoading = viewModel.isLoading
     val isRefreshing = viewModel.isRefreshing
     val snackbarMessage = viewModel.snackbarMessage
@@ -101,11 +101,9 @@ fun ExpenseCollectionScreen(
 
     // RESPONSIVE: Screen configuration
     val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
     val horizontalPadding = ResponsiveSpacing.adaptiveHorizontal()
 
     var showDeleteDialog by remember { mutableStateOf(false) }
-    // FIXED: Proper typing for collectionToDelete
     var collectionToDelete by remember { mutableStateOf<ExpenseCollection?>(null) }
 
     // Navigation message state
@@ -117,7 +115,7 @@ fun ExpenseCollectionScreen(
     // Clear navigation messages after they're shown
     LaunchedEffect(initialSuccessMessage, initialErrorMessage) {
         if (initialSuccessMessage != null) {
-            delay(4000) // Auto-clear after 4 seconds
+            delay(4000)
             showNavigationSuccess = false
             navigationSuccessMessage = ""
         }
@@ -146,7 +144,7 @@ fun ExpenseCollectionScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Navigation Success Message (TOP PRIORITY)
+                // Navigation Success Message
                 AnimatedVisibility(
                     visible = showNavigationSuccess && navigationSuccessMessage.isNotEmpty(),
                     enter = slideInVertically(
@@ -202,7 +200,7 @@ fun ExpenseCollectionScreen(
                     }
                 }
 
-                // Local Status Messages (LOWER PRIORITY - only show if no navigation messages)
+                // Local Status Messages
                 AnimatedVisibility(
                     visible = snackbarMessage.isNotEmpty() &&
                             !showNavigationSuccess &&
@@ -260,7 +258,10 @@ fun ExpenseCollectionScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = horizontalPadding, vertical = AppTheme.spacing.huge),
+                                .padding(
+                                    horizontal = horizontalPadding,
+                                    vertical = AppTheme.spacing.huge
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -317,6 +318,7 @@ fun ExpenseCollectionScreen(
                             }
 
                             items(collections) { collection ->
+                                // FIXED: Correct property access
                                 val members = collectionMembers[collection.id] ?: emptyList()
                                 var showDropdown by remember { mutableStateOf(false) }
 
@@ -351,7 +353,7 @@ fun ExpenseCollectionScreen(
                                                 )
                                             }
 
-                                            // RESPONSIVE: Collection details with responsive member display
+                                            // Collection details
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = collection.name,
@@ -366,7 +368,9 @@ fun ExpenseCollectionScreen(
 
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
+                                                    horizontalArrangement = Arrangement.spacedBy(
+                                                        AppTheme.spacing.sm
+                                                    )
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.Person,
@@ -379,7 +383,7 @@ fun ExpenseCollectionScreen(
                                             }
                                         }
 
-                                        // RESPONSIVE: Member Avatars Preview
+                                        // Member Avatars Preview
                                         if (members.isNotEmpty()) {
                                             ResponsiveMemberAvatarDisplay(
                                                 members = members,
@@ -415,6 +419,7 @@ fun ExpenseCollectionScreen(
                                                     },
                                                     onClick = {
                                                         showDropdown = false
+                                                        // FIXED: Correct assignment
                                                         collectionToDelete = collection
                                                         showDeleteDialog = true
                                                     },
@@ -696,7 +701,6 @@ fun ExpenseCollectionScreen(
                 },
                 text = {
                     Text(
-                        // FIXED: Safe access to .name property
                         text = "Are you sure you want to delete '${collectionToDelete?.name ?: "this collection"}'? This will permanently delete all expenses and data for this collection. This action cannot be undone.",
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Medium

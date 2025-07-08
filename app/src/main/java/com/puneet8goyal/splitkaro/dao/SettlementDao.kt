@@ -16,7 +16,11 @@ interface SettlementDao {
     suspend fun getSettlementsForCollection(collectionId: Long): List<SettlementRecord> // FIXED: Correct return type
 
     @Query("UPDATE settlements SET isSettled = :isSettled, settledAt = :settledAt WHERE id = :settlementId")
-    suspend fun markAsSettled(settlementId: Long, isSettled: Boolean, settledAt: Long?) // FIXED: Return Unit
+    suspend fun markAsSettled(
+        settlementId: Long,
+        isSettled: Boolean,
+        settledAt: Long?
+    ) // FIXED: Return Unit
 
     @Query("DELETE FROM settlements WHERE collectionId = :collectionId AND isSettled = 0") // FIXED: Only delete unsettled
     suspend fun clearSettlements(collectionId: Long) // FIXED: Return Unit

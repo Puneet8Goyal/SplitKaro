@@ -3,10 +3,10 @@ package com.puneet8goyal.splitkaro.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import com.puneet8goyal.splitkaro.ui.screens.AddExpenseScreen
 import com.puneet8goyal.splitkaro.ui.screens.EditExpenseScreen
 import com.puneet8goyal.splitkaro.ui.screens.ExpenseCollectionScreen

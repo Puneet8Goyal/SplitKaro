@@ -191,12 +191,16 @@ fun EditExpenseScreen(
                 isLoading && expense == null -> {
                     ModernLoadingState(message = "Loading expense...")
                 }
+
                 expense == null -> {
                     // Error state
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = horizontalPadding, vertical = AppTheme.spacing.huge),
+                            .padding(
+                                horizontal = horizontalPadding,
+                                vertical = AppTheme.spacing.huge
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -230,12 +234,16 @@ fun EditExpenseScreen(
                         }
                     }
                 }
+
                 membersInThisCollection.isEmpty() -> {
                     // No members state
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = horizontalPadding, vertical = AppTheme.spacing.huge),
+                            .padding(
+                                horizontal = horizontalPadding,
+                                vertical = AppTheme.spacing.huge
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -269,6 +277,7 @@ fun EditExpenseScreen(
                         }
                     }
                 }
+
                 else -> {
                     Column(
                         modifier = Modifier

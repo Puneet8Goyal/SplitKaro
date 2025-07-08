@@ -40,6 +40,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.puneet8goyal.splitkaro.R
 import com.puneet8goyal.splitkaro.ui.theme.AppTheme
 import com.puneet8goyal.splitkaro.ui.theme.ResponsiveSpacing
 import com.puneet8goyal.splitkaro.utils.ModernPreviewCard
@@ -67,6 +70,9 @@ fun AddExpenseScreen(
     onBackClick: () -> Unit,
     onExpenseAdded: (String) -> Unit
 ) {
+    val context = LocalContext.current
+
+    // ViewModel state
     val description = viewModel.description
     val amount = viewModel.amount
     val paidByMemberId = viewModel.paidByMemberId
@@ -74,12 +80,12 @@ fun AddExpenseScreen(
     val snackbarMessage = viewModel.snackbarMessage
     val isLoading = viewModel.isLoading
 
+    // Collection members
     val collectionMembers by collectionViewModel.collectionMembers.collectAsState()
     val membersInThisCollection = collectionMembers[collectionId] ?: emptyList()
 
-    // RESPONSIVE: Screen configuration
+    // Screen configuration
     val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
     val horizontalPadding = ResponsiveSpacing.adaptiveHorizontal()
 
     // Preview calculations
@@ -87,6 +93,7 @@ fun AddExpenseScreen(
     val selectedMembersCount = splitAmongMemberIds.size
     val perPersonAmount = if (selectedMembersCount > 0) amountValue / selectedMembersCount else 0.0
 
+    // Load members for this collection
     LaunchedEffect(collectionId) {
         collectionViewModel.loadMembersForCollection(collectionId)
     }
@@ -97,10 +104,9 @@ fun AddExpenseScreen(
             .background(AppTheme.colors.background)
             .systemBarsPadding()
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Error Message (Top Priority)
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // Error Message
             AnimatedVisibility(
                 visible = snackbarMessage.isNotEmpty(),
                 enter = slideInVertically(
@@ -129,7 +135,7 @@ fun AddExpenseScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Add Expense",
+                        text = stringResource(R.string.add_expense),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.25).sp
@@ -141,7 +147,7 @@ fun AddExpenseScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                             tint = AppTheme.colors.onSurfaceVariant
                         )
                     }
@@ -170,12 +176,10 @@ fun AddExpenseScreen(
                         ) {
                             Text(
                                 text = "👥",
-                                style = MaterialTheme.typography.displayMedium.copy(
-                                    fontSize = 64.sp
-                                )
+                                style = MaterialTheme.typography.displayMedium.copy(fontSize = 64.sp)
                             )
                             Text(
-                                text = "No members found",
+                                text = stringResource(R.string.no_members_yet),
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = (-0.25).sp
@@ -184,7 +188,7 @@ fun AddExpenseScreen(
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = "Please add members to the collection before creating expenses",
+                                text = stringResource(R.string.add_members_to_start),
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontWeight = FontWeight.Medium,
                                     lineHeight = 24.sp
@@ -195,6 +199,7 @@ fun AddExpenseScreen(
                         }
                     }
                 }
+
                 else -> {
                     Column(
                         modifier = Modifier
@@ -204,11 +209,9 @@ fun AddExpenseScreen(
                         verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.xl)
                     ) {
                         // Expense Details Section
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
-                        ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)) {
                             Text(
-                                text = "Expense Details",
+                                text = stringResource(R.string.expense_details),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = (-0.25).sp
@@ -219,8 +222,8 @@ fun AddExpenseScreen(
                             ModernTextField(
                                 value = description,
                                 onValueChange = { viewModel.updateDescription(it) },
-                                label = "Description",
-                                placeholder = "What was this expense for?",
+                                label = stringResource(R.string.expense_description),
+                                placeholder = stringResource(R.string.expense_description_hint),
                                 leadingIcon = Icons.Default.Description,
                                 enabled = !isLoading,
                                 keyboardOptions = KeyboardOptions(
@@ -231,26 +234,24 @@ fun AddExpenseScreen(
                             ModernTextField(
                                 value = amount,
                                 onValueChange = { viewModel.updateAmount(it) },
-                                label = "Amount",
-                                placeholder = "0.00",
+                                label = stringResource(R.string.amount),
+                                placeholder = stringResource(R.string.amount_hint),
                                 leadingIcon = Icons.Default.MonetizationOn,
                                 enabled = !isLoading,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Decimal
-                                )
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                             )
                         }
 
-                        // RESPONSIVE: Paid By Section
+                        // Who Paid Section
                         ResponsiveMemberSelector(
                             members = membersInThisCollection,
                             selectedMemberIds = listOfNotNull(paidByMemberId),
                             onMemberClick = { member -> viewModel.updatePaidByMemberId(member.id) },
                             selectionType = "radio",
-                            label = "Who paid?"
+                            label = stringResource(R.string.who_paid)
                         )
 
-                        // RESPONSIVE: Split Among Section
+                        // Split Among Section
                         ResponsiveMemberSelector(
                             members = membersInThisCollection,
                             selectedMemberIds = splitAmongMemberIds,
@@ -264,7 +265,7 @@ fun AddExpenseScreen(
                                 viewModel.updateSplitAmongMemberIds(currentList)
                             },
                             selectionType = "checkbox",
-                            label = "Split among"
+                            label = stringResource(R.string.split_among)
                         )
 
                         // Preview Section
@@ -278,10 +279,12 @@ fun AddExpenseScreen(
 
                         // Add Button
                         ResponsiveButton(
-                            text = if (isLoading) "Adding..." else "Add Expense",
+                            text = if (isLoading) stringResource(R.string.adding) else stringResource(
+                                R.string.add_expense
+                            ),
                             onClick = {
                                 viewModel.addExpense(collectionId) {
-                                    onExpenseAdded("✅ Expense added successfully!")
+                                    onExpenseAdded(context.getString(R.string.expense_added_success))
                                 }
                             },
                             enabled = !isLoading && description.trim().isNotEmpty() &&

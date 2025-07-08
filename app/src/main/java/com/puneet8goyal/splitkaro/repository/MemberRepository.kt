@@ -3,14 +3,20 @@ package com.puneet8goyal.splitkaro.repository
 import com.puneet8goyal.splitkaro.dao.MemberDao
 import com.puneet8goyal.splitkaro.data.CollectionMember
 import com.puneet8goyal.splitkaro.data.Member
+import com.puneet8goyal.splitkaro.repository.interfaces.MemberRepositoryInterface
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class MemberRepository @Inject constructor(
     private val memberDao: MemberDao
-) {
-    suspend fun insertMember(member: Member): Result<Long> = withContext(Dispatchers.IO) {
+) : MemberRepositoryInterface {
+
+    override suspend fun insertMember(member: Member): Result<Long> = withContext(Dispatchers.IO) {
         try {
             println("DEBUG: Inserting member: ${member.name}")
             val memberId = memberDao.insertMember(member)
@@ -22,14 +28,14 @@ class MemberRepository @Inject constructor(
         }
     }
 
-    suspend fun insertCollectionMember(collectionMember: CollectionMember): Result<Unit> =
+    override suspend fun insertCollectionMember(collectionMember: CollectionMember): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                // Check if member is already in collection
                 val exists = memberDao.checkMemberInCollection(
                     collectionMember.memberId,
                     collectionMember.collectionId
                 ) > 0
+
                 if (exists) {
                     println("DEBUG: Member ${collectionMember.memberId} already in collection ${collectionMember.collectionId}")
                     return@withContext Result.success(Unit)
@@ -44,7 +50,7 @@ class MemberRepository @Inject constructor(
             }
         }
 
-    suspend fun getAllMembers(): List<Member> = withContext(Dispatchers.IO) {
+    override suspend fun getAllMembers(): List<Member> = withContext(Dispatchers.IO) {
         try {
             val members = memberDao.getAllMembers()
             println("DEBUG: Fetched ${members.size} members")
@@ -55,11 +61,11 @@ class MemberRepository @Inject constructor(
         }
     }
 
-    suspend fun getMembersByCollectionId(collectionId: Long): List<Member> =
+    override suspend fun getMembersByCollectionId(collectionId: Long): List<Member> =
         withContext(Dispatchers.IO) {
             try {
                 val members = memberDao.getMembersByCollectionId(collectionId)
-                println("DEBUG: Fetched ${members.size} members for collectionId: $collectionId")
+                println("DEBUG: Fetched ${members.size} members for collection $collectionId")
                 members
             } catch (e: Exception) {
                 println("DEBUG: Error fetching members for collection: ${e.message}")
@@ -67,7 +73,22 @@ class MemberRepository @Inject constructor(
             }
         }
 
-    suspend fun updateMember(member: Member): Result<Unit> = withContext(Dispatchers.IO) {
+    // NEW: Reactive data with Flow
+    override fun getMembersFlowByCollectionId(collectionId: Long): Flow<List<Member>> {
+        return memberDao.getMembersFlowByCollectionId(collectionId)
+            .flowOn(Dispatchers.IO)
+    }
+
+    override suspend fun getMemberById(id: Long): Member? = withContext(Dispatchers.IO) {
+        try {
+            memberDao.getMemberById(id)
+        } catch (e: Exception) {
+            println("DEBUG: Error fetching member by ID: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun updateMember(member: Member): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             memberDao.updateMember(member)
             Result.success(Unit)
@@ -76,11 +97,9 @@ class MemberRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteMember(member: Member): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteMember(member: Member): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // First remove all collection memberships
             memberDao.removeAllCollectionMemberships(member.id)
-            // Then delete the member
             memberDao.deleteMember(member)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -88,15 +107,10 @@ class MemberRepository @Inject constructor(
         }
     }
 
-    suspend fun getMemberById(id: Long): Member? = withContext(Dispatchers.IO) {
-        try {
-            memberDao.getMemberById(id)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    suspend fun removeMemberFromCollection(collectionId: Long, memberId: Long): Result<Unit> =
+    override suspend fun removeMemberFromCollection(
+        collectionId: Long,
+        memberId: Long
+    ): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 memberDao.removeMemberFromCollection(collectionId, memberId)
@@ -106,7 +120,7 @@ class MemberRepository @Inject constructor(
             }
         }
 
-    suspend fun isMemberInCollection(memberId: Long, collectionId: Long): Boolean =
+    override suspend fun isMemberInCollection(memberId: Long, collectionId: Long): Boolean =
         withContext(Dispatchers.IO) {
             try {
                 memberDao.checkMemberInCollection(memberId, collectionId) > 0
