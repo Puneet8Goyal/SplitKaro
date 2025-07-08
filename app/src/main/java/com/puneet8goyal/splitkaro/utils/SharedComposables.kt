@@ -99,7 +99,6 @@ fun ResponsiveMemberAvatarDisplay(
     maxVisible: Int = 3,
     modifier: Modifier = Modifier,
     avatarSize: Int = 32,
-    showCount: Boolean = true
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -470,13 +469,15 @@ fun ResponsiveButton(
     val buttonHeight = when {
         screenWidth < 360.dp -> 48.dp
         screenWidth < 480.dp -> 52.dp
-        else -> 56.dp
+        screenWidth < 600.dp -> 56.dp
+        else -> 60.dp // Larger for tablets
     }
 
     val fontSize = when {
         screenWidth < 360.dp -> 14.sp
         screenWidth < 480.dp -> 15.sp
-        else -> 16.sp
+        screenWidth < 600.dp -> 16.sp
+        else -> 17.sp
     }
 
     Button(
@@ -520,12 +521,21 @@ fun ResponsiveFloatingActionButton(
     val fabPadding = when {
         screenWidth < 360.dp -> AppTheme.spacing.lg
         screenWidth < 480.dp -> AppTheme.spacing.xl
-        else -> AppTheme.spacing.xxl
+        screenWidth < 600.dp -> AppTheme.spacing.xxl
+        else -> AppTheme.spacing.xxxl
+    }
+
+    val fabSize = when {
+        screenWidth < 480.dp -> 56.dp
+        screenWidth < 600.dp -> 64.dp
+        else -> 72.dp // Larger for tablets
     }
 
     ExtendedFloatingActionButton(
         onClick = onClick,
-        modifier = modifier.padding(fabPadding),
+        modifier = modifier
+            .padding(fabPadding)
+            .height(fabSize),
         containerColor = AppTheme.colors.primary,
         contentColor = Color.White,
         shape = RoundedCornerShape(AppTheme.radius.lg)
@@ -625,7 +635,8 @@ fun ModernTextField(
     placeholder: String,
     leadingIcon: ImageVector,
     enabled: Boolean = true,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
@@ -655,13 +666,15 @@ fun ModernTextField(
         modifier = Modifier.fillMaxWidth(),
         enabled = enabled,
         keyboardOptions = keyboardOptions,
+        isError = isError,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = AppTheme.colors.primary,
-            unfocusedBorderColor = AppTheme.colors.border,
+            focusedBorderColor = if (isError) AppTheme.colors.error else AppTheme.colors.primary,
+            unfocusedBorderColor = if (isError) AppTheme.colors.error else AppTheme.colors.border,
+            errorBorderColor = AppTheme.colors.error,
             focusedTextColor = AppTheme.colors.onSurface,
             unfocusedTextColor = AppTheme.colors.onSurface,
-            cursorColor = AppTheme.colors.primary,
-            focusedLabelColor = AppTheme.colors.primary,
+            cursorColor = if (isError) AppTheme.colors.error else AppTheme.colors.primary,
+            focusedLabelColor = if (isError) AppTheme.colors.error else AppTheme.colors.primary,
             unfocusedLabelColor = AppTheme.colors.onSurfaceVariant
         ),
         shape = RoundedCornerShape(AppTheme.radius.md),
@@ -744,22 +757,6 @@ fun ModernPreviewCard(
             }
         }
     }
-}
-
-// LEGACY MEMBER CARD (for backward compatibility)
-@Composable
-fun ModernMemberCard(
-    member: Member,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    selectionType: String = "checkbox"
-) {
-    ResponsiveMemberCard(
-        member = member,
-        isSelected = isSelected,
-        onClick = onClick,
-        selectionType = selectionType
-    )
 }
 
 @Composable
@@ -1132,6 +1129,7 @@ fun ModernLoadingState(
     }
 }
 
+
 @Composable
 fun MemberAvatar(
     member: Member,
@@ -1140,9 +1138,20 @@ fun MemberAvatar(
     showBorder: Boolean = false,
     borderColor: Color = AppTheme.colors.primary
 ) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+
+    // Adaptive sizing for larger screens
+    val adaptiveSize = when {
+        screenWidth < 360.dp -> (size * 0.9f).toInt()
+        screenWidth < 480.dp -> size
+        screenWidth < 600.dp -> (size * 1.1f).toInt()
+        else -> (size * 1.2f).toInt()
+    }
+
     Box(
         modifier = modifier
-            .size(size.dp)
+            .size(adaptiveSize.dp)
             .let {
                 if (showBorder) {
                     it.border(2.dp, borderColor, CircleShape)
@@ -1166,10 +1175,11 @@ fun MemberAvatar(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.25).sp
             ),
-            fontSize = (size * 0.4).sp
+            fontSize = (adaptiveSize * 0.4).sp
         )
     }
 }
+
 
 @Composable
 fun ModernSearchBar(
@@ -1222,35 +1232,5 @@ fun ModernSearchBar(
         textStyle = MaterialTheme.typography.bodyLarge.copy(
             fontWeight = FontWeight.Medium
         )
-    )
-}
-
-// Legacy support components
-@Composable
-fun ModernStatusCard(
-    message: String,
-    isSuccess: Boolean,
-    onDismiss: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-    PremiumStatusCard(
-        message = message,
-        type = if (isSuccess) StatusType.SUCCESS else StatusType.ERROR,
-        onDismiss = onDismiss,
-        autoDismiss = true,
-        modifier = modifier
-    )
-}
-
-@Composable
-fun ModernStatusMessage(
-    message: String,
-    isSuccess: Boolean
-) {
-    PremiumStatusCard(
-        message = message,
-        type = if (isSuccess) StatusType.SUCCESS else StatusType.ERROR,
-        autoDismiss = true,
-        autoDismissDelay = 2500L
     )
 }

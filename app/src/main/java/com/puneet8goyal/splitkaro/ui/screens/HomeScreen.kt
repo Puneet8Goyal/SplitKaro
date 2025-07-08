@@ -25,17 +25,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.TrendingDown
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.PersonAdd
-import androidx.compose.material.icons.outlined.TrendingDown
-import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,7 +49,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -90,8 +91,6 @@ fun HomeScreen(
     val membersInThisCollection = collectionMembers[collectionId] ?: emptyList()
 
     // RESPONSIVE: Screen configuration
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
     val horizontalPadding = ResponsiveSpacing.adaptiveHorizontal()
 
     // Search state
@@ -124,9 +123,13 @@ fun HomeScreen(
             .background(AppTheme.colors.background)
             .systemBarsPadding()  // CRITICAL: Fixes status bar overlap
     ) {
+        val haptic = LocalHapticFeedback.current
         PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.refreshExpenses(collectionId) },
+            onRefresh = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                viewModel.refreshExpenses(collectionId)
+            },
             modifier = Modifier.fillMaxSize()
         ) {
             Column(
@@ -288,8 +291,8 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     imageVector = when {
-                                        overallBalance > 0 -> Icons.Outlined.TrendingUp
-                                        overallBalance < 0 -> Icons.Outlined.TrendingDown
+                                        overallBalance > 0 -> Icons.AutoMirrored.Outlined.TrendingUp
+                                        overallBalance < 0 -> Icons.AutoMirrored.Outlined.TrendingDown
                                         else -> Icons.Outlined.Groups
                                     },
                                     contentDescription = null,
@@ -326,7 +329,7 @@ fun HomeScreen(
 
                             // Individual member balances
                             if (userCentricBalances.isNotEmpty()) {
-                                Divider(color = AppTheme.colors.border.copy(alpha = 0.5f))
+                                HorizontalDivider(color = AppTheme.colors.border.copy(alpha = 0.5f))
                                 Text(
                                     text = "Individual Balances",
                                     style = MaterialTheme.typography.titleSmall.copy(
@@ -420,7 +423,8 @@ fun HomeScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = horizontalPadding),
-                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
+                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg),
+                            userScrollEnabled = true
                         ) {
                             val groupedExpenses = AppUtils.groupExpensesByDate(filteredExpenses)
 

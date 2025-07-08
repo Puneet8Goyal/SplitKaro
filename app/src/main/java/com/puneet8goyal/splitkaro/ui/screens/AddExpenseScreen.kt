@@ -10,22 +10,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,14 +36,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.puneet8goyal.splitkaro.R
@@ -85,7 +80,6 @@ fun AddExpenseScreen(
     val membersInThisCollection = collectionMembers[collectionId] ?: emptyList()
 
     // Screen configuration
-    val configuration = LocalConfiguration.current
     val horizontalPadding = ResponsiveSpacing.adaptiveHorizontal()
 
     // Preview calculations
@@ -146,7 +140,7 @@ fun AddExpenseScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = stringResource(R.string.back),
                             tint = AppTheme.colors.onSurfaceVariant
                         )
@@ -292,20 +286,6 @@ fun AddExpenseScreen(
                                     splitAmongMemberIds.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth()
                         )
-
-                        // Loading indicator
-                        if (isLoading) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    color = AppTheme.colors.primary,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
 
                         // Bottom spacing
                         Spacer(modifier = Modifier.height(AppTheme.spacing.xl))

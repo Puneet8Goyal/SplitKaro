@@ -37,12 +37,4 @@ class UserPreferences @Inject constructor(
     fun isFirstTimeUser(): Boolean {
         return getCurrentUserName() == null
     }
-
-    fun hasValidCurrentUser(): Boolean {
-        return getCurrentUserMemberId() != -1L && getCurrentUserName() != null
-    }
-
-    fun clearUserData() {
-        prefs.edit().clear().apply()
-    }
 }

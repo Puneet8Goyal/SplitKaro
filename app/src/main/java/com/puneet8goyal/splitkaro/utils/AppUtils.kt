@@ -10,11 +10,6 @@ import java.util.Locale
 
 object AppUtils {
 
-    fun formatCurrency(amount: Double): String {
-        val formatter = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
-        return formatter.format(amount)
-    }
-
     fun getInitials(name: String): String {
         return name.split(" ")
             .mapNotNull { it.firstOrNull()?.toString() }
@@ -81,18 +76,19 @@ object AppUtils {
             }
     }
 
-    fun formatDate(timestamp: Long): String {
-        val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-        return dateFormat.format(Date(timestamp))
-    }
-
-    fun formatTime(timestamp: Long): String {
-        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-        return timeFormat.format(Date(timestamp))
-    }
-
     fun formatDateTime(timestamp: Long): String {
         val dateTimeFormat = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
         return dateTimeFormat.format(Date(timestamp))
+    }
+
+    private val currencyFormatter by lazy {
+        NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 2
+        }
+    }
+
+    fun formatCurrency(amount: Double): String {
+        return currencyFormatter.format(amount)
     }
 }

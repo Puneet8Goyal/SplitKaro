@@ -31,16 +31,4 @@ class ValidationHelper(private val appConfig: AppConfig) {
             appConfig.getString(R.string.error_split_members_required)
         } else null
     }
-
-    fun validateMemberName(name: String): String? {
-        return if (name.trim().isEmpty()) {
-            appConfig.getString(R.string.error_member_name_required)
-        } else null
-    }
-
-    fun validateCollectionName(name: String): String? {
-        return if (name.trim().isEmpty()) {
-            appConfig.getString(R.string.error_collection_name_required)
-        } else null
-    }
 }

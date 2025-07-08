@@ -56,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -100,7 +99,6 @@ fun ExpenseCollectionScreen(
     val currentCollectionId = viewModel.currentCollectionId
 
     // RESPONSIVE: Screen configuration
-    val configuration = LocalConfiguration.current
     val horizontalPadding = ResponsiveSpacing.adaptiveHorizontal()
 
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -303,7 +301,8 @@ fun ExpenseCollectionScreen(
                                 horizontal = horizontalPadding,
                                 vertical = AppTheme.spacing.lg
                             ),
-                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg)
+                            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.lg),
+                            userScrollEnabled = true
                         ) {
                             item {
                                 Text(
@@ -389,7 +388,6 @@ fun ExpenseCollectionScreen(
                                                 members = members,
                                                 maxVisible = 3,
                                                 avatarSize = 32,
-                                                showCount = true
                                             )
                                         }
 
