@@ -109,7 +109,7 @@ Contributions are welcome! To contribute:
 Please ensure your code follows the project's coding standards and includes relevant tests.
 
 ## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 Happy expense splitting with SplitKaro! 💸
